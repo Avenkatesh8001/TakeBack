@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TakeBack</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="overlay-widget">
+    <!-- Draggable Header -->
+    <div class="widget-header" id="widgetHeader">
+      <span class="widget-title">TakeBack</span>
+      <div class="window-controls">
+        <button class="control-btn minimize" id="minimizeBtn">−</button>
+        <button class="control-btn close" id="closeBtn">×</button>
+      </div>
+    </div>
+
+    <!-- Status Section -->
+    <div class="widget-section">
+      <div class="status-row">
+        <div class="status-indicator">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Inactive</span>
+        </div>
+      </div>
+      <div class="button-row">
+        <button id="startBtn" class="btn btn-start">Start</button>
+        <button id="stopBtn" class="btn btn-stop" disabled>Stop</button>
+      </div>
+    </div>
+
+    <!-- Danger Meter -->
+    <div class="widget-section">
+      <div class="section-label">Danger Level</div>
+      <div class="danger-display">
+        <div class="danger-meter">
+          <div class="danger-bar" id="dangerBar"></div>
+        </div>
+        <div class="danger-value" id="dangerValue">0</div>
+      </div>
+    </div>
+
+    <!-- Live Transcript -->
+    <div class="widget-section">
+      <div class="section-label">Live Transcript</div>
+      <div class="transcript-box" id="transcriptBox">
+        <p class="placeholder">Waiting...</p>
+      </div>
+    </div>
+
+    <!-- Expandable Settings -->
+    <div class="widget-section collapsible">
+      <div class="section-header" id="settingsToggle">
+        <div class="section-label">Settings</div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="settings-content" id="settingsContent">
+        <div class="setting-item">
+          <label>Sensitivity</label>
+          <input type="range" id="sensitivitySlider" min="1" max="5" value="3">
+          <span class="value-display" id="sensitivityValue">3</span>
+        </div>
+
+        <div class="setting-item">
+          <label>Keywords</label>
+          <textarea id="confidentialKeywords" rows="2" placeholder="revenue, API, password"></textarea>
+        </div>
+
+        <div class="setting-item checkbox">
+          <input type="checkbox" id="autoMute" checked>
+          <label for="autoMute">Auto-mute</label>
+        </div>
+
+        <button id="saveSettings" class="btn btn-save">Save</button>
+      </div>
+    </div>
+
+    <!-- Mini Activity Log -->
+    <div class="widget-section">
+      <div class="section-label">Activity</div>
+      <div class="log-box" id="logBox">
+        <p class="log-entry">Ready</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
