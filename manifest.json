@@ -1,4 +1,4 @@
-{
+{ //manifest V3 for chrome extension
   "manifest_version": 3,
   "name": "TakeBack",
   "version": "1.0.0",

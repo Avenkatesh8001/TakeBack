@@ -1,5 +1,5 @@
 // Content Script for TakeBack Extension
-
+//main content scripts
 let isMonitoring = false;
 let currentPreset = null;
 let strength = 60;

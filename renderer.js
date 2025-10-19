@@ -1,4 +1,5 @@
 // Check if running in Electron environment
+//renderer js file for electron project
 const isElectron = typeof require !== 'undefined' && require('electron');
 const ipcRenderer = isElectron ? require('electron').ipcRenderer : null;
 const remote = isElectron ? require('electron').remote : null;

@@ -1,5 +1,5 @@
 // Background Service Worker for TakeBack Extension
-
+//background
 // Listen for messages from popup and content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.action) {

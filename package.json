@@ -1,4 +1,4 @@
-{
+{ //package json for electron project
   "name": "takeback",
   "version": "1.0.0",
   "description": "",

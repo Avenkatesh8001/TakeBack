@@ -1,6 +1,7 @@
 // Predictive Mute - Clean, Fast, Working Version
 // Detects sensitive words BEFORE they're spoken to the meeting
-
+//main content file with all the states and different white list common words
+//and predictive ai functions
 (function() {
   'use strict';
 

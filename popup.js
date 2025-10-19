@@ -1,5 +1,5 @@
 // Extension Popup JavaScript
-
+//functionality for popup
 // DOM Elements
 const presetButtons = document.querySelectorAll('.preset-btn');
 const presetName = document.getElementById('presetName');

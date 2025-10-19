@@ -1,4 +1,5 @@
 // Notification System for TakeBack
+//functionality for notifications
 class TakeBackNotification {
   constructor() {
     this.isVisible = false;
