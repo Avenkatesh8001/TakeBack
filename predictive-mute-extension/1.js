@@ -1,6 +1,6 @@
 // Predictive Mute - Clean, Fast, Working Version
 // Detects sensitive words BEFORE they're spoken to the meeting
-//main content file
+
 (function() {
   'use strict';
 
@@ -231,25 +231,6 @@
   // INSTANT MUTE - ONLY AUDIO, NOT CAMERA
   // ============================================================================
 
-  function playMuteBeep() {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    if (!audioContext) return;
-
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    // iPhone-like beep settings
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(700, audioContext.currentTime); // A slightly high-pitched, clean tone
-    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); // Not too loud
-
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.1); // A short beep
-  }
-
   function executeInstantMute(trigger, text, method) {
     // Just-in-time check to see if the mic is already muted by the user/app
     const alreadyMutedButton = document.querySelector('button[data-is-muted="true"]');
@@ -259,7 +240,6 @@
     }
 
     console.log('[PredictiveMute] MUTING NOW');
-    playMuteBeep();
 
     isMuted = true;
     lastMuteTime = Date.now();
@@ -456,91 +436,79 @@
   }
 
   // ============================================================================
-  // ALERT - NEW NOTIFICATION STYLE
+  // ALERT - CLEAN & SIMPLE
   // ============================================================================
 
   function showAlert(trigger, text, method) {
-    const existing = document.getElementById('pm-notification-overlay');
+    const existing = document.getElementById('pm-alert');
     if (existing) existing.remove();
 
-    const notificationOverlay = document.createElement('div');
-    notificationOverlay.id = 'pm-notification-overlay';
-    notificationOverlay.className = 'notification-overlay';
+    const alert = document.createElement('div');
+    alert.id = 'pm-alert';
+    alert.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #2f3136;
+      color: #dcddde;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 8px 16px rgba(0,0,0,0.24);
+      z-index: 9999999;
+      font-family: 'Open Sans', sans-serif;
+      text-align: center;
+      max-width: 400px;
+      animation: slideIn 0.3s ease-out;
+    `;
 
-    notificationOverlay.innerHTML = `
-      <div class="notification-container">
-        <!-- Main Notification Panel -->
-        <div class="notification-panel">
-          <div class="notification-header">
-            <div class="notification-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M16 4L8 12L16 20" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M8 4L0 12L8 20" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <div class="notification-content">
-              <p class="notification-message" id="notificationMessage">
-                We automatically muted your microphone because you talked about a blacklisted topic: <strong>${trigger}</strong>.
-              </p>
-            </div>
-          </div>
+    const icon = `<svg width="48" height="48" viewBox="0 0 24 24"><path fill="#f04747" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1.2-9.1c0-.66.54-1.2 1.2-1.2.66 0 1.2.54 1.2 1.2l-.01 6.2c0 .66-.53 1.2-1.19 1.2s-1.2-.54-1.2-1.2V4.9zm6.5 6.1c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.49 6-3.31 6-6.72h-1.7z"/></svg>`;
 
-          <div class="notification-actions">
-            <button class="btn btn-primary" id="addToWhitelistBtn">
-              Add topic to whitelist
-            </button>
-            
-            <div class="secondary-actions">
-              <button class="btn btn-secondary" id="ignoreNowBtn">
-                Ignore for now
-              </button>
-              <button class="btn btn-secondary" id="ignoreCallBtn">
-                Ignore for this call
-              </button>
-            </div>
-            
-            <a href="#" class="transcript-link" id="showTranscriptLink">
-              Show transcript
-            </a>
-          </div>
+    alert.innerHTML = `
+      <div style="margin-bottom: 16px;">${icon}</div>
+      <div style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #ffffff;">
+        MICROPHONE MUTED
+      </div>
+      <div style="font-size: 14px; color: #b9bbbe; margin-bottom: 20px;">
+        Sensitive content detected: <strong>${trigger}</strong>
+      </div>
+      <div style="font-size: 12px; color: #dcddde; margin-bottom: 24px; max-width: 350px; word-wrap: break-word; background: #202225; padding: 10px; border-radius: 3px;">
+        <em>"${text.substring(0, 80)}${text.length > 80 ? '...' : ''}"</em>
+      </div>
+      ${config.learningEnabled ? `
+        <div style="font-size: 13px; color: #b9bbbe; margin-bottom: 12px;">Was this correct?</div>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button id="pm-yes" style="padding: 10px 20px; background: #43b581; border: none; border-radius: 3px; color: white; cursor: pointer; font-family: 'Open Sans', sans-serif; font-weight: 600;">
+            Yes
+          </button>
+          <button id="pm-no" style="padding: 10px 20px; background: #f04747; border: none; border-radius: 3px; color: white; cursor: pointer; font-family: 'Open Sans', sans-serif; font-weight: 600;">
+            No
+          </button>
         </div>
-
-        <!-- Transcript Panel (Hidden by default) -->
-        <div class="transcript-panel" id="transcriptPanel">
-          <div class="transcript-header">
-            <h3>Transcript</h3>
-          </div>
-          <div class="transcript-content" id="transcriptContent">
-            <p class="transcript-line">${text}</p>
-          </div>
-        </div>
+      ` : ''}
+      <div style="margin-top: 20px; font-size: 12px; color: #72767d;">
+        You can unmute yourself in the meeting.
       </div>
     `;
 
-    document.body.appendChild(notificationOverlay);
+    document.body.appendChild(alert);
 
-    const showTranscriptLink = notificationOverlay.querySelector('#showTranscriptLink');
-    const transcriptPanel = notificationOverlay.querySelector('#transcriptPanel');
-
-    showTranscriptLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      transcriptPanel.classList.toggle('show');
-    });
-
-    const closeButtons = notificationOverlay.querySelectorAll('#addToWhitelistBtn, #ignoreNowBtn, #ignoreCallBtn');
-    closeButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            notificationOverlay.querySelector('.notification-container').classList.add('hide');
-            setTimeout(() => notificationOverlay.remove(), 300);
-        });
-    });
-
+    if (config.learningEnabled) {
+      document.getElementById('pm-yes')?.addEventListener('click', () => {
+        handleFeedback(trigger, text, true);
+        alert.remove();
+      });
+      document.getElementById('pm-no')?.addEventListener('click', () => {
+        handleFeedback(trigger, text, false);
+        alert.remove();
+      });
+    }
 
     setTimeout(() => {
-        if (notificationOverlay.parentNode) {
-            notificationOverlay.querySelector('.notification-container').classList.add('hide');
-            setTimeout(() => notificationOverlay.remove(), 300);
-        }
+      if (alert.parentNode) {
+        alert.style.opacity = '0';
+        setTimeout(() => alert.remove(), 300);
+      }
     }, 7000);
   }
 
@@ -576,188 +544,10 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .notification-overlay {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      z-index: 10000;
-      width: auto;
-      height: auto;
+    @keyframes slideIn {
+      from { opacity: 0; transform: translate(-50%, -60%); }
+      to { opacity: 1; transform: translate(-50%, -50%); }
     }
-
-    .notification-container {
-      display: flex;
-      gap: 20px;
-      max-width: 600px;
-      width: 90%;
-      animation: slideInFromBottomLeft 0.5s ease-out forwards;
-    }
-
-    @keyframes slideInFromBottomLeft {
-      from {
-        opacity: 0;
-        transform: translate(-20px, 20px);
-      }
-      to {
-        opacity: 1;
-        transform: translate(0, 0);
-      }
-    }
-
-    .notification-panel {
-      background: #282828;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(139, 92, 246, 0.2);
-      min-width: 400px;
-      max-width: 500px;
-    }
-
-    .notification-header {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .notification-icon {
-      color: #8b5cf6;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    .notification-content {
-      flex: 1;
-    }
-
-    .notification-message {
-      font-size: 16px;
-      line-height: 1.5;
-      color: #e2e8f0;
-      font-weight: 400;
-    }
-
-    .notification-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .btn {
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-family: inherit;
-      text-decoration: none;
-      display: inline-block;
-      text-align: center;
-    }
-
-    .btn-primary {
-      background: #8b5cf6;
-      color: white;
-      padding: 12px 24px;
-      width: 100%;
-    }
-
-    .btn-primary:hover {
-      background: #7c3aed;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-    }
-
-    .secondary-actions {
-      display: flex;
-      gap: 12px;
-    }
-
-    .btn-secondary {
-      background: transparent;
-      color: #e2e8f0;
-      border: 1px solid #64748b;
-      padding: 10px 20px;
-      flex: 1;
-    }
-
-    .btn-secondary:hover {
-      background: rgba(100, 116, 139, 0.1);
-      border-color: #8b5cf6;
-      color: #8b5cf6;
-    }
-
-    .transcript-link {
-      color: #64748b;
-      text-decoration: underline;
-      font-size: 14px;
-      text-align: center;
-      transition: color 0.2s ease;
-    }
-
-    .transcript-link:hover {
-      color: #8b5cf6;
-    }
-
-    .transcript-panel {
-      background: #282828;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(139, 92, 246, 0.2);
-      min-width: 300px;
-      max-width: 400px;
-      display: none;
-    }
-
-    .transcript-panel.show {
-      display: block;
-      animation: slideInFromBottomLeft 0.3s ease-out;
-    }
-
-    .transcript-header h3 {
-      color: #e2e8f0;
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 16px;
-    }
-
-    .transcript-content {
-      max-height: 300px;
-      overflow-y: auto;
-    }
-
-    .transcript-line {
-      font-size: 14px;
-      line-height: 1.6;
-      color: #64748b;
-      margin-bottom: 8px;
-      padding: 4px 0;
-    }
-
-    .transcript-line.flagged {
-      color: #8b5cf6;
-      text-decoration: underline;
-      font-weight: 500;
-    }
-    
-    .notification-container.hide {
-      animation: slideOutToBottomLeft 0.3s ease-in forwards;
-    }
-
-    @keyframes slideOutToBottomLeft {
-      from {
-        opacity: 1;
-        transform: translate(0, 0);
-      }
-      to {
-        opacity: 0;
-        transform: translate(-20px, 20px);
-      }
-    }
-    
     @keyframes pulse-green {
       0%, 100% { box-shadow: 0 0 15px #00ffea; }
       50% { box-shadow: 0 0 25px #00ffea, 0 0 15px #00ffea; }
