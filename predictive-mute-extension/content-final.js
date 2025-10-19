@@ -9,7 +9,19 @@
   // CONFIG
   let config = {
     enabled: true,
-    sensitiveWords: ["password", "credit", "card", "confidential", "secret", "ssn", "social security", "bank", "account", "routing", "salary", "compensation", "bonus", "stock", "fuck", "shit", "damn", "bitch", "asshole", "cunt", "motherfucker"],
+    sensitiveWords: [
+      // Authentication & Credentials
+      "password", "passphrase", "api key", "access token", "private key", "secret key", "auth token",
+      // Financial Personal Info
+      "salary", "compensation", "income", "pay", "wage", "bonus", "stock", "equity", "raise",
+      "credit card", "debit card", "bank account", "routing number", "account number",
+      // Personal ID
+      "ssn", "social security", "social security number", "driver's license", "passport",
+      // Sensitive Topics
+      "confidential", "secret", "classified", "proprietary",
+      // Profanity (optional - remove if not needed)
+      "fuck", "shit", "damn", "bitch", "asshole", "cunt", "motherfucker"
+    ],
     bannedTopics: [],
     learningEnabled: true,
     confidenceThreshold: 0.7
@@ -28,6 +40,7 @@
 
   // ULTRA-FAST DETECTION STATE
   let partialTranscript = ''; // Accumulates partial results for instant checking
+  let previousTranscript = ''; // Stores the previous final transcript for context
   let lastCheckTime = 0;
   const MIN_CHECK_INTERVAL = 30; // Check every 30ms for ultra-fast response
 
@@ -39,6 +52,9 @@
 
   // WHITELIST - never mute these
   const SAFE_WORDS = ['hello', 'hi', 'hey', 'okay', 'ok', 'thanks', 'thank', 'please', 'yes', 'no', 'sure', 'great', 'good', 'bye'];
+  const DEBIASING_WORDS = ['is not', 'isnt', 'not my', 'not your', 'not his', 'not her', 'not their', 'false', 'fake', 'incorrect', 'wrong'];
+  const BUSINESS_CONTEXT_WORDS = ['meeting', 'presentation', 'report', 'team', 'project', 'work', 'company', 'office', 'business', 'agenda', 'minutes', 'deadline', 'goal', 'objective', 'quarter', 'revenue', 'budget'];
+  const PERSONAL_CONTEXT_WORDS = ['my', 'i', 'personally', 'my own', 'i am', "i'm", "i'll", "i've", "i'd", 'income'];
 
   // PRECOMPUTED PREFIX MAP for O(1) lookup speed
   let sensitiveWordPrefixMap = new Map(); // Maps prefixes to full words
@@ -47,7 +63,9 @@
     sensitiveWordPrefixMap.clear();
     for (const word of config.sensitiveWords) {
       const lower = word.toLowerCase();
-      const prefixLength = lower.length <= 4 ? 2 : 3;
+      // BALANCED: Use 3-char prefixes for faster detection while avoiding too many false positives
+      // Example: "password" triggers on "pas" (3 chars), "income" triggers on "inc" (3 chars)
+      const prefixLength = Math.min(3, lower.length);
       const prefix = lower.substring(0, prefixLength);
 
       if (!sensitiveWordPrefixMap.has(prefix)) {
@@ -55,7 +73,18 @@
       }
       sensitiveWordPrefixMap.get(prefix).push(lower);
     }
-    console.log(`[PredictiveMute] Built prefix map with ${sensitiveWordPrefixMap.size} prefixes`);
+    console.log(`[PredictiveMute] Built prefix map with ${sensitiveWordPrefixMap.size} prefixes (3-char for fast detection)`);
+  }
+
+  async function fetchSynonyms(word) {
+    try {
+      const response = await fetch(`https://api.datamuse.com/words?rel_syn=${word}`);
+      const data = await response.json();
+      return data.map(item => item.word);
+    } catch (error) {
+      console.error(`[PredictiveMute] Failed to fetch synonyms for ${word}:`, error);
+      return [];
+    }
   }
 
   // Learning data
@@ -69,23 +98,36 @@
   // INIT
   // ============================================================================
 
-  function init() {
-    chrome.storage.sync.get(['enabled', 'sensitiveWords', 'bannedTopics', 'learningEnabled', 'confidenceThreshold'], (data) => {
-      if (data.enabled !== undefined) config.enabled = data.enabled;
-      if (data.sensitiveWords) config.sensitiveWords = data.sensitiveWords;
-      if (data.bannedTopics) config.bannedTopics = data.bannedTopics;
-      if (data.learningEnabled !== undefined) config.learningEnabled = data.learningEnabled;
-      if (data.confidenceThreshold) config.confidenceThreshold = data.confidenceThreshold;
+  async function init() {
+    const data = await new Promise(resolve => chrome.storage.sync.get(['enabled', 'sensitiveWords', 'bannedTopics', 'learningEnabled', 'prefixMatchingEnabled', 'synonymDetectionEnabled', 'smartContextEnabled'], resolve));
 
-      console.log('[PredictiveMute] Config:', config);
+    if (data.enabled !== undefined) config.enabled = data.enabled;
+    if (data.sensitiveWords) config.sensitiveWords = data.sensitiveWords;
+    if (data.bannedTopics) config.bannedTopics = data.bannedTopics;
+    if (data.learningEnabled !== undefined) config.learningEnabled = data.learningEnabled;
+    if (data.prefixMatchingEnabled !== undefined) config.prefixMatchingEnabled = data.prefixMatchingEnabled;
+    if (data.synonymDetectionEnabled !== undefined) config.synonymDetectionEnabled = data.synonymDetectionEnabled;
+    if (data.smartContextEnabled !== undefined) config.smartContextEnabled = data.smartContextEnabled;
 
-      // Build prefix map for ultra-fast detection
-      buildPrefixMap();
+    console.log('[PredictiveMute] Initial config:', config);
 
-      if (config.enabled) {
-        startMonitoring();
+    // Fetch synonyms and expand the sensitive words list
+    if (config.synonymDetectionEnabled && config.sensitiveWords && config.sensitiveWords.length > 0) {
+      const originalWords = [...config.sensitiveWords];
+      for (const word of originalWords) {
+        const synonyms = await fetchSynonyms(word);
+        if (synonyms.length > 0) {
+          config.sensitiveWords.push(...synonyms);
+        }
       }
-    });
+    }
+
+    // Build prefix map for ultra-fast detection
+    buildPrefixMap();
+
+    if (config.enabled) {
+      startMonitoring();
+    }
 
     chrome.storage.local.get(['learningData', 'logs'], (data) => {
       if (data.learningData) learningData = data.learningData;
@@ -161,19 +203,28 @@
         }
       }
 
+      if (finalTranscript) {
+        previousTranscript = finalTranscript;
+      }
+
       const transcript = (finalTranscript + interimTranscript).toLowerCase().trim();
 
+      // Skip if empty, throttled, or in cooldown
       if (transcript.length === 0 || now - lastCheckTime < MIN_CHECK_INTERVAL) {
         return;
       }
 
+      // CRITICAL: Skip if we're in cooldown period after muting
+      if (now - lastMuteTime < MUTE_COOLDOWN) {
+        return;
+      }
+
       lastCheckTime = now;
-      partialTranscript = transcript;
 
       const confidence = event.results[event.results.length - 1][0].confidence || 1.0;
       const isFinal = event.results[event.results.length - 1].isFinal;
 
-      checkAndMuteFast(transcript, confidence, isFinal);
+      checkAndMuteFast(transcript, previousTranscript, confidence, isFinal);
     };
 
     recognition.onerror = (event) => {
@@ -221,7 +272,7 @@
   // ULTRA-FAST DETECTION - SUB-200MS REACTION TIME
   // ============================================================================
 
-  function checkAndMuteFast(text, confidence, isFinal) {
+  function checkAndMuteFast(text, previousText, confidence, isFinal) {
     // Skip if already muted or recovering
     if (isMuted || isRecovering) return;
 
@@ -244,6 +295,32 @@
     const textLower = text.toLowerCase();
     const detectionStartTime = Date.now();
 
+    // PERSONAL FINANCIAL CONTEXT DETECTION
+    // Detect "my income", "my salary", "my compensation", etc.
+    const personalFinancialTerms = ['income', 'salary', 'compensation', 'pay', 'wage', 'bonus', 'raise', 'equity', 'stock'];
+    for (const term of personalFinancialTerms) {
+      // Check for personal context indicators before the financial term
+      const personalPatterns = [
+        `my ${term}`,
+        `my own ${term}`,
+        `i make`,
+        `i earn`,
+        `i get paid`,
+        `my current ${term}`,
+        `my new ${term}`
+      ];
+
+      for (const pattern of personalPatterns) {
+        if (textLower.includes(pattern)) {
+          const reactionTime = Date.now() - detectionStartTime;
+          console.log(`[PredictiveMute] ⚡ PERSONAL FINANCE DETECTED: "${pattern}" in "${text}" (${reactionTime}ms)`);
+          updateConfidenceBar(100, 'LEAK_INTENT');
+          executeInstantMute(pattern, text, 'personal-finance');
+          return;
+        }
+      }
+    }
+
     // OPTIMIZATION 2: Combined keyword and prefix search
     for (const sensitiveWord of config.sensitiveWords) {
       const lowerSensitiveWord = sensitiveWord.toLowerCase();
@@ -262,16 +339,18 @@
         return;
       }
 
-      // Prefix match
-      const prefixLength = lowerSensitiveWord.length <= 4 ? 2 : 3;
-      const prefix = lowerSensitiveWord.substring(0, prefixLength);
-      for (const word of words) {
-        if (word.length >= prefixLength && word.startsWith(prefix)) {
-          const reactionTime = Date.now() - detectionStartTime;
-          console.log(`[PredictiveMute] ⚡ PREFIX MATCH: "${word}" → "${lowerSensitiveWord}" (${reactionTime}ms)`);
-          updateConfidenceBar(100, 'LEAK_INTENT');
-          executeInstantMute(lowerSensitiveWord, text, 'keyword');
-          return;
+      // Prefix match - FAST (3 chars for quick detection)
+      if (config.prefixMatchingEnabled) {
+        const prefixLength = Math.min(3, lowerSensitiveWord.length);
+        const prefix = lowerSensitiveWord.substring(0, prefixLength);
+        for (const word of words) {
+          if (word.length >= prefixLength && word.startsWith(prefix)) {
+            const reactionTime = Date.now() - detectionStartTime;
+            console.log(`[PredictiveMute] ⚡ PREFIX MATCH: "${word}" → "${lowerSensitiveWord}" (${reactionTime}ms)`);
+            updateConfidenceBar(100, 'LEAK_INTENT');
+            executeInstantMute(lowerSensitiveWord, text, 'keyword');
+            return;
+          }
         }
       }
     }
@@ -313,19 +392,36 @@
         if (mlNow - lastMLInference >= ML_INFERENCE_INTERVAL && text.length >= 5) {
             lastMLInference = mlNow;
 
+            const fullText = previousText ? previousText + ' ' + text : text;
+
             // Non-blocking async ML check
-            window.intentDetector.predict(text).then(prediction => {
+            window.intentDetector.predict(fullText).then(prediction => {
                 if (prediction) {
                     lastMLPrediction = prediction;
 
                     // Update confidence bar (0-100 scale)
                     const mlConfidence = Math.round(prediction.leak * 100);
-                    updateConfidenceBar(mlConfidence, prediction.label);
+
+                    let finalConfidence = mlConfidence;
+
+                    // Smart Context
+                    if (config.smartContextEnabled) {
+                        const hasBusinessContext = BUSINESS_CONTEXT_WORDS.some(word => fullText.includes(word));
+                        const hasPersonalContext = PERSONAL_CONTEXT_WORDS.some(word => fullText.includes(word));
+
+                        if (hasBusinessContext && !hasPersonalContext) {
+                            finalConfidence *= 0.8; // Reduce confidence in a business context
+                        } else if (hasPersonalContext) {
+                            finalConfidence *= 1.3; // Increase confidence in a personal context
+                        }
+                    }
+
+                    updateConfidenceBar(finalConfidence, prediction.label);
 
                     // Check if should mute
-                    if (window.intentDetector.shouldMute(prediction, config.confidenceThreshold)) {
-                        console.log(`[PredictiveMute] ⚡ ML DETECTED: "${text}"`, prediction);
-                        executeInstantMute('sensitive content', text, 'ml');
+                    if (window.intentDetector.shouldMute(prediction, fullText, config.confidenceThreshold)) {
+                        console.log(`[PredictiveMute] ⚡ ML DETECTED: "${fullText}"`, prediction);
+                        executeInstantMute('sensitive content', fullText, 'ml');
                     }
                 }
             }).catch(e => {
@@ -445,6 +541,14 @@
     }
 
     if (success) {
+      // CRITICAL: Clear transcript and ML cache to prevent re-triggering
+      previousTranscript = '';
+      partialTranscript = '';
+      lastMLPrediction = null;
+      currentConfidence = 0;
+
+      console.log('[PredictiveMute] ✓ Cleared transcript cache and ML predictions');
+
       // Recognition is no longer stopped to ensure it's always on.
       showAlert(trigger, text, method);
       addLog(`MUTED: "${text}" (${method}). Method: ${clickedButtonInfo}`, true);

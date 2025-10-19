@@ -23,12 +23,18 @@
         </div>
 
         <div class="section">
-            <h2>Confidence Level</h2>
-            <p>Lower values will make the muting more sensitive.</p>
-            <input type="range" id="confidence-threshold" min="0.5" max="0.95" step="0.05">
-            <div class="range-labels">
-                <span>Less Sensitive</span>
-                <span>More Sensitive</span>
+            <h2>Features</h2>
+            <div class="feature-toggle">
+                <input type="checkbox" id="prefix-matching-enabled">
+                <label for="prefix-matching-enabled">Prefix Matching</label>
+            </div>
+            <div class="feature-toggle">
+                <input type="checkbox" id="synonym-detection-enabled">
+                <label for="synonym-detection-enabled">Synonym Detection</label>
+            </div>
+            <div class="feature-toggle">
+                <input type="checkbox" id="smart-context-enabled">
+                <label for="smart-context-enabled">Smart Context</label>
             </div>
         </div>
 

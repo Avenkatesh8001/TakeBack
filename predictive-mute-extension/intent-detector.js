@@ -170,9 +170,32 @@
     }
 
     // Check if should mute based on prediction
-    shouldMute(prediction, threshold = 0.7) {
+    shouldMute(prediction, text, threshold = 0.7) {
       if (!prediction) return false;
-      return prediction.label === 'LEAK_INTENT';
+
+      // Basic check for leak intent
+      if (prediction.label !== 'LEAK_INTENT') return false;
+
+      // More sophisticated heuristics
+      const textLength = text.length;
+      let dynamicThreshold = threshold;
+
+      // Lower the threshold for longer text, as we are more confident
+      if (textLength > 50) {
+        dynamicThreshold = threshold * 0.8;
+      } else if (textLength > 100) {
+        dynamicThreshold = threshold * 0.6;
+      }
+
+      // Check for specific PII types that should always be muted
+      const highConfidencePII = ['CREDIT_CARD_NUMBER', 'SOCIAL_SECURITY_NUMBER', 'PASSWORD', 'API_KEY'];
+      const hasHighConfidencePII = prediction.predictions.some(p => highConfidencePII.includes(p));
+
+      if (hasHighConfidencePII) {
+        return true;
+      }
+
+      return prediction.leak >= dynamicThreshold;
     }
 
     // Get status for debugging

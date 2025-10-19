@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     const enabledToggle = document.getElementById('enabled');
     const bannedTopicsTextarea = document.getElementById('banned-topics');
-    const confidenceThresholdSlider = document.getElementById('confidence-threshold');
+    const prefixMatchingEnabledToggle = document.getElementById('prefix-matching-enabled');
+    const synonymDetectionEnabledToggle = document.getElementById('synonym-detection-enabled');
+    const smartContextEnabledToggle = document.getElementById('smart-context-enabled');
     const sensitiveKeywordsContainer = document.getElementById('sensitive-keywords');
     const saveButton = document.getElementById('save-settings');
     const logEntriesContainer = document.getElementById('log-entries');
@@ -11,7 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
         enabled: true,
         sensitiveWords: ["password", "credit", "card", "confidential", "secret", "ssn", "social security", "bank", "account", "routing", "salary", "compensation", "bonus", "stock", "fuck", "shit", "damn", "bitch", "asshole", "cunt", "motherfucker"],
         bannedTopics: [],
-        confidenceThreshold: 0.7,
+        prefixMatchingEnabled: true,
+        synonymDetectionEnabled: true,
+        smartContextEnabled: true,
     };
 
     function saveSettings() {
@@ -19,7 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const settingsToSave = {
             enabled: enabledToggle.checked,
             bannedTopics,
-            confidenceThreshold: parseFloat(confidenceThresholdSlider.value),
+            prefixMatchingEnabled: prefixMatchingEnabledToggle.checked,
+            synonymDetectionEnabled: synonymDetectionEnabledToggle.checked,
+            smartContextEnabled: smartContextEnabledToggle.checked,
             sensitiveWords: DEFAULT_SETTINGS.sensitiveWords // Always save the default list
         };
 
@@ -41,7 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.sync.get(DEFAULT_SETTINGS, (result) => {
             enabledToggle.checked = result.enabled;
             bannedTopicsTextarea.value = result.bannedTopics.join('\n');
-            confidenceThresholdSlider.value = result.confidenceThreshold;
+            prefixMatchingEnabledToggle.checked = result.prefixMatchingEnabled;
+            synonymDetectionEnabledToggle.checked = result.synonymDetectionEnabled;
+            smartContextEnabledToggle.checked = result.smartContextEnabled;
             
             DEFAULT_SETTINGS.sensitiveWords = result.sensitiveWords;
 
