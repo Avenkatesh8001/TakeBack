@@ -1,0 +1,24 @@
+{
+  "name": "predictive-mute-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension for predictive muting of sensitive content in online meetings",
+  "main": "background.js",
+  "scripts": {
+    "create-icons": "node create-icons.js",
+    "test": "echo \"No tests yet - see README for manual testing\" && exit 0"
+  },
+  "keywords": [
+    "chrome-extension",
+    "privacy",
+    "security",
+    "google-meet",
+    "zoom",
+    "predictive",
+    "mute",
+    "hackathon"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {}
+}

@@ -1,0 +1,49 @@
+predictive-mute-extension/
+│
+├── 📋 Core Extension Files
+│   ├── manifest.json                # Extension configuration (Manifest V3)
+│   ├── background.js                # Background service worker
+│   ├── content.js                   # Main detection logic (runs on meeting tabs)
+│   ├── popup.html                   # Settings popup UI
+│   ├── popup.js                     # Settings popup logic
+│   └── styles.css                   # Popup UI styles
+│
+├── 🎨 Icon Assets
+│   ├── create-icons.js              # Node.js SVG icon generator
+│   ├── create-png-icons.html        # Browser-based PNG icon creator
+│   └── icons/
+│       ├── icon.svg                 # Original icon design
+│       ├── icon16.svg               # 16x16 SVG (needs PNG conversion)
+│       ├── icon48.svg               # 48x48 SVG (needs PNG conversion)
+│       └── icon128.svg              # 128x128 SVG (needs PNG conversion)
+│
+├── 📚 Documentation
+│   ├── README.md                    # Full technical documentation (520 lines)
+│   ├── INSTALL.md                   # Step-by-step installation guide
+│   ├── HACKATHON_DEMO.md            # Demo script and presentation tips
+│   ├── QUICK_START.txt              # Quick reference card
+│   ├── PROJECT_SUMMARY.md           # Complete project overview
+│   └── FILE_TREE.txt                # This file
+│
+└── ⚙️ Configuration
+    ├── package.json                 # NPM metadata
+    └── .gitignore                   # Git exclusions
+
+📊 Statistics
+─────────────────────────────────────────────────────────
+Code Files:        10 files (~600 lines)
+Documentation:     6 files (~1,600 lines)
+Total:             ~2,200 lines
+
+🎯 Quick Actions
+─────────────────────────────────────────────────────────
+Install:    Open INSTALL.md
+Test:       See QUICK_START.txt
+Demo:       Read HACKATHON_DEMO.md
+Reference:  Check README.md
+
+⚡ Key Files to Understand
+─────────────────────────────────────────────────────────
+1. content.js         → Detection algorithm
+2. manifest.json      → Extension config
+3. HACKATHON_DEMO.md  → How to present

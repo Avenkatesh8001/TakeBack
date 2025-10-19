@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predictive Mute</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Predictive Mute</h1>
+            <label class="toggle-switch">
+                <input type="checkbox" id="enabled">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="section">
+            <h2>Banned Topics</h2>
+            <p>Add words or phrases that should trigger a mute. One per line.</p>
+            <textarea id="banned-topics" rows="4"></textarea>
+        </div>
+
+        <div class="section">
+            <h2>Confidence Level</h2>
+            <p>Lower values will make the muting more sensitive.</p>
+            <input type="range" id="confidence-threshold" min="0.5" max="0.95" step="0.05">
+            <div class="range-labels">
+                <span>Less Sensitive</span>
+                <span>More Sensitive</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Sensitive Keywords</h2>
+            <p>The extension will always mute for these keywords.</p>
+            <div id="sensitive-keywords" class="keywords-list"></div>
+        </div>
+        
+        <div class="section">
+            <h2>Mute Log</h2>
+            <div id="log-entries"></div>
+            <p id="no-logs">No mute events recorded yet.</p>
+        </div>
+
+        <div class="footer">
+            <button id="save-settings">Save Settings</button>
+        </div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

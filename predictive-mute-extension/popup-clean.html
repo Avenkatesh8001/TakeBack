@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Predictive Mute</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 340px;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #ffffff;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .header {
+      padding: 24px 20px 20px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+    }
+
+    .logo {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      letter-spacing: -0.3px;
+    }
+
+    .tagline {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+      font-weight: 400;
+    }
+
+    .content {
+      padding: 20px;
+    }
+
+    .status-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-icon {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #6b7280;
+      box-shadow: 0 0 0 4px rgba(107, 115, 128, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .status-icon.active {
+      background: #10b981;
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3), 0 0 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .status-text {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 28px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.1);
+      transition: 0.3s;
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 3px;
+      bottom: 2px;
+      background: white;
+      transition: 0.3s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    input:checked + .toggle-slider {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: transparent;
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .stat-box {
+      background: rgba(102, 126, 234, 0.1);
+      border: 1px solid rgba(102, 126, 234, 0.2);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 600;
+    }
+
+    .section-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .input-box {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      transition: all 0.2s;
+    }
+
+    .input-box:focus-within {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(102, 126, 234, 0.5);
+    }
+
+    .input-hint {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      resize: none;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    textarea {
+      min-height: 70px;
+    }
+
+    .footer {
+      padding: 16px 20px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.2);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .footer-text {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.4);
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">🎤</div>
+    <h1>Predictive Mute</h1>
+    <div class="tagline">AI-powered meeting protection</div>
+  </div>
+
+  <div class="content">
+    <div class="status-card">
+      <div class="status-icon" id="statusIcon"></div>
+      <div class="status-text" id="statusText">Ready</div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="enableToggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="stats" id="statsBox" style="display: none;">
+      <div class="stat-box">
+        <div class="stat-value" id="correctCount">0</div>
+        <div class="stat-label">Correct</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="falseCount">0</div>
+        <div class="stat-label">False</div>
+      </div>
+    </div>
+
+    <div class="section-label">Sensitive Words</div>
+    <div class="input-box">
+      <div class="input-hint">Comma-separated keywords</div>
+      <textarea id="sensitiveWords" placeholder="password, credit, ssn..."></textarea>
+    </div>
+
+    <div class="section-label">Banned Topics</div>
+    <div class="input-box">
+      <div class="input-hint">Topics to block entirely</div>
+      <input type="text" id="bannedTopics" placeholder="project alpha, merger...">
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">
+      Detects and mutes before sensitive words<br>reach the meeting
+    </div>
+  </div>
+
+  <script src="popup-clean.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# Node modules
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Optional: Ignore generated PNG icons if you regenerate them
+# Uncomment if you want to regenerate icons for each clone
+# icons/*.png

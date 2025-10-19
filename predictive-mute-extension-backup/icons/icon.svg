@@ -1,0 +1,12 @@
+<svg width="128" height="128" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="24" fill="#4285f4"/>
+  <g transform="translate(24, 24)">
+    <!-- Shield icon -->
+    <path d="M40 10 L40 35 C40 50 30 60 20 65 C10 60 0 50 0 35 L0 10 L20 0 Z"
+          fill="white" stroke="white" stroke-width="2"/>
+    <!-- Mute symbol -->
+    <circle cx="40" cy="40" r="12" fill="#dc3545"/>
+    <line x1="34" y1="34" x2="46" y2="46" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <text x="64" y="110" font-family="Arial" font-size="14" font-weight="bold" fill="white" text-anchor="middle">PM</text>
+</svg>

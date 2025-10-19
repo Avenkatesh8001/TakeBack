@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predictive Mute Settings</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Predictive Mute</h1>
+
+        <!-- --- Settings --- -->
+        <div class="settings-group">
+            <div class="setting">
+                <label for="sensitivity">Sensitivity</label>
+                <input type="range" id="sensitivity" min="0.5" max="0.95" step="0.05">
+            </div>
+            <div class="setting">
+                <label for="semanticMode">Semantic Mode</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="semanticMode">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- --- Mute Log --- -->
+        <div id="mute-log-container">
+            <h2>Last 5 Mutes</h2>
+            <div id="log-entries">
+                <!-- Log entries will be injected here by popup.js -->
+            </div>
+            <p id="no-logs">No mute events recorded yet.</p>
+        </div>
+
+        <!-- --- Footer --- -->
+        <div class="footer">
+            <button id="reset-button">Reset Preferences</button>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

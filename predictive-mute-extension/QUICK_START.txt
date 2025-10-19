@@ -1,0 +1,126 @@
+╔═══════════════════════════════════════════════════════════════╗
+║           PREDICTIVE MUTE - QUICK START GUIDE                 ║
+╚═══════════════════════════════════════════════════════════════╝
+
+📦 INSTALLATION (2 minutes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Open create-png-icons.html in Chrome
+2. Download all 3 icons → save to icons/ folder
+3. Go to chrome://extensions
+4. Enable "Developer mode"
+5. Click "Load unpacked" → select this folder
+6. Done! Extension should appear with blue icon
+
+🎯 TESTING (1 minute)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Open meet.google.com
+2. Look for green "🛡️ Predictive Mute Active" in bottom-right
+3. Click any input field
+4. Type: "I will share my password now"
+5. Press ENTER
+6. See red alert: "🔇 MUTED BEFORE SENSITIVE WORD"
+
+✅ TEST CASES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Should TRIGGER:
+  → "I will now share my password hunter2"
+  → "Upload the credit card number now"
+  → "The secret project x details are ready"
+  → "My ssn is 123-45-6789"
+
+Should NOT trigger:
+  → "This is our public roadmap discussion"
+  → "Let's review the quarterly report"
+
+⚙️ CONFIGURATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Click extension icon to open settings:
+  • Lookahead: How many words ahead to check (1-10)
+  • Keywords: Comma-separated sensitive words
+  • Toggle: Enable/disable monitoring
+
+Default Keywords:
+  password, credit, card, confidential, secret, ssn, bank, project x
+
+🐛 TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+No green indicator?
+  → Refresh the meeting tab
+  → Check you're on meet.google.com or zoom.us
+
+Detection not working?
+  → Make sure extension is enabled (check popup)
+  → Press ENTER after typing
+  → Open DevTools (F12) → look for [PredictiveMute] logs
+
+Extension won't load?
+  → Make sure PNG icons exist in icons/ folder
+  → Check manifest.json is valid JSON
+
+📁 FILE STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+manifest.json          → Extension config (Manifest V3)
+background.js          → Service worker
+content.js             → Detection logic (runs on meeting tabs)
+popup.html/js          → Settings UI
+styles.css             → Popup styling
+create-png-icons.html  → Icon generator (open in browser)
+
+📚 DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+README.md              → Full documentation
+INSTALL.md             → Detailed installation guide
+HACKATHON_DEMO.md      → Demo script and tips
+QUICK_START.txt        → This file
+
+🚀 DEMO TIPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Always test before presenting
+2. Keep DevTools open to show logs
+3. Explain lookahead concept clearly
+4. Show both trigger and non-trigger cases
+5. Emphasize privacy (100% local processing)
+
+⚡ HOW IT WORKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Monitors keyboard input on meeting tabs
+2. When Enter pressed, analyzes text word-by-word
+3. For each word, checks next N words (lookahead)
+4. If sensitive keyword found → triggers mute
+5. Shows visual alert + logs event
+
+⚠️ CURRENT LIMITATIONS (Demo Version)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Text input only (not live speech yet)
+• Simulated muting (shows alert, doesn't actually mute)
+• Triggered by Enter key (not real-time)
+
+Production version would add:
+  → Web Speech API for live audio
+  → WebRTC integration for actual muting
+  → LLM for semantic analysis
+
+🎓 KEY CONCEPTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lookahead Window:
+  Number of words to check ahead. Higher = more cautious but
+  may trigger earlier than needed.
+
+  Lookahead=2: Checks current word + next 2 words
+  Lookahead=5: Checks current word + next 5 words
+
+Word Normalization:
+  Removes punctuation and makes lowercase for matching
+  Example: "Password!" → "password"
+
+Partial Matching:
+  "pass" will match "password", "passphrase", etc.
+
+📞 SUPPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Found a bug? Have questions?
+  → Check README.md first
+  → Open DevTools Console for debug logs
+  → Look for [PredictiveMute] messages
+
+Good luck with your hackathon demo! 🎉

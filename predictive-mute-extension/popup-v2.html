@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Predictive Mute v2.0</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .stat-box {
+      background: rgba(124, 58, 237, 0.1);
+      padding: 8px 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #7c3aed;
+    }
+    .stat-label {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-top: 2px;
+    }
+    .advanced-section {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: 10px;
+    }
+    .slider-container {
+      margin-top: 8px;
+    }
+    .slider {
+      width: 100%;
+    }
+    .slider-value {
+      text-align: center;
+      font-weight: 600;
+      color: #7c3aed;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="icon-container">
+        <img src="icons/icon48.png" alt="Icon" style="width: 32px; height: 32px;">
+      </div>
+      <div class="title-container">
+        <h1>Predictive Mute</h1>
+        <div class="subtitle">v2.0 Enhanced Edition</div>
+      </div>
+    </div>
+
+    <!-- Status Indicator -->
+    <div class="status-section">
+      <div class="status-dot" id="statusDot"></div>
+      <div class="status-label" id="statusLabel">Initializing...</div>
+    </div>
+
+    <!-- Main Toggle -->
+    <div class="setting-group">
+      <div class="setting-header">
+        <label class="setting-label">Enable Predictive Mute</label>
+        <label class="switch">
+          <input type="checkbox" id="enabledToggle" checked>
+          <span class="slider-toggle"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Learning Stats -->
+    <div class="stats-grid" id="statsGrid" style="display: none;">
+      <div class="stat-box">
+        <div class="stat-value" id="correctCount">0</div>
+        <div class="stat-label">Correct</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="correctedCount">0</div>
+        <div class="stat-label">Corrected</div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="settings-section">
+      <div class="section-header" id="settingsToggle">
+        <span>⚙️ Settings</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+
+      <div class="settings-content" id="settingsContent">
+        <!-- Audio Monitoring -->
+        <div class="setting-group">
+          <div class="setting-header">
+            <label class="setting-label">Audio Monitoring</label>
+            <label class="switch">
+              <input type="checkbox" id="audioToggle" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Learning Mode -->
+        <div class="setting-group">
+          <div class="setting-header">
+            <label class="setting-label">Learning Mode</label>
+            <label class="switch">
+              <input type="checkbox" id="learningToggle" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+          <div class="setting-description">
+            Ask for feedback after each mute to improve accuracy
+          </div>
+        </div>
+
+        <!-- Prediction Buffer -->
+        <div class="setting-group">
+          <label class="setting-label">Prediction Buffer</label>
+          <div class="slider-container">
+            <input type="range" min="250" max="500" value="350" step="50" class="slider" id="bufferSlider">
+            <div class="slider-value"><span id="bufferValue">350</span>ms</div>
+          </div>
+          <div class="setting-description">
+            Time before mute is activated (250-500ms)
+          </div>
+        </div>
+
+        <!-- Min Confidence -->
+        <div class="setting-group">
+          <label class="setting-label">Minimum Confidence</label>
+          <div class="slider-container">
+            <input type="range" min="0.5" max="1.0" value="0.8" step="0.1" class="slider" id="confidenceSlider">
+            <div class="slider-value"><span id="confidenceValue">80</span>%</div>
+          </div>
+          <div class="setting-description">
+            Higher values = fewer false positives
+          </div>
+        </div>
+
+        <!-- Sensitive Words -->
+        <div class="setting-group">
+          <label class="setting-label">Sensitive Keywords</label>
+          <input
+            type="text"
+            id="sensitiveWordsInput"
+            class="input-field"
+            placeholder="password, credit, ssn, secret..."
+          >
+          <div class="setting-description">
+            Comma-separated list of sensitive words
+          </div>
+        </div>
+
+        <!-- Banned Topics -->
+        <div class="setting-group">
+          <label class="setting-label">Banned Topics</label>
+          <input
+            type="text"
+            id="bannedTopicsInput"
+            class="input-field"
+            placeholder="project alpha, merger, layoffs..."
+          >
+          <div class="setting-description">
+            Topics to detect semantically (e.g., "bank account" ≈ "Chase checking")
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced -->
+    <div class="advanced-section" id="advancedSection" style="display: none;">
+      <h3 style="font-size: 14px; margin: 0 0 8px 0;">🧠 Semantic Detection</h3>
+      <div style="font-size: 12px; opacity: 0.8; line-height: 1.4;">
+        <strong>Active Concepts:</strong>
+        <ul id="conceptsList" style="margin: 8px 0; padding-left: 20px;">
+          <li>Banking (threshold: 75%)</li>
+          <li>Credentials (threshold: 75%)</li>
+          <li>Confidentiality (threshold: 75%)</li>
+          <li>Financial (threshold: 75%)</li>
+          <li>Personal (threshold: 75%)</li>
+        </ul>
+      </div>
+      <button id="resetLearningBtn" style="width: 100%; padding: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; color: #dc2626; font-weight: 600; cursor: pointer; margin-top: 8px;">
+        Reset Learning Data
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top: 16px; text-align: center; font-size: 11px; opacity: 0.6;">
+      Enhanced with semantic detection, temporal buffering, and adaptive learning
+    </div>
+  </div>
+
+  <script src="popup-v2.js"></script>
+</body>
+</html>

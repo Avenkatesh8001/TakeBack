@@ -1,0 +1,170 @@
+/* --- CSS Variables for Consistent Theming --- */
+:root {
+    --bg-color: #0a0a0a;
+    --surface-color: #1a1a1a;
+    --accent-color: #8b5cf6;
+    --accent-gradient: linear-gradient(90deg, #8b5cf6, #9333ea);
+    --border-color: #2a2a2a;
+    --text-primary: #e5e7eb;
+    --text-secondary: #9ca3af;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    margin: 0;
+    width: 320px;
+}
+
+.container {
+    padding: 16px;
+}
+
+h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    text-align: center;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* --- Settings Section --- */
+.settings-group {
+    background-color: var(--surface-color);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.setting {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.setting:last-child {
+    margin-bottom: 0;
+}
+
+label {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* --- Custom Toggle Switch --- */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 24px;
+}
+.toggle-switch input { display: none; }
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #333;
+    border-radius: 34px;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background: var(--accent-gradient);
+}
+
+input:checked + .slider:before {
+    transform: translateX(16px);
+}
+
+/* --- Custom Range Slider --- */
+input[type=range] {
+  -webkit-appearance: none;
+  width: 120px;
+  background: transparent;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  cursor: pointer;
+  background: #333;
+  border-radius: 3px;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  cursor: pointer;
+  margin-top: -5px; /* Center thumb on track */
+}
+
+/* --- Mute Log Section --- */
+#mute-log-container h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.log-entry {
+    background-color: var(--surface-color);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.log-entry p { margin: 0; }
+.log-reason { color: var(--text-primary); font-weight: 500; }
+.log-time { color: var(--text-secondary); font-size: 10px; margin-top: 4px; }
+
+#no-logs {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 12px;
+    padding: 20px 0;
+}
+
+/* --- Footer --- */
+.footer {
+    text-align: center;
+    margin-top: 16px;
+}
+
+#reset-button {
+    background: none;
+    border: 1px solid #444;
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    font-size: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#reset-button:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
