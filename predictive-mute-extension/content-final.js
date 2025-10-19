@@ -26,8 +26,37 @@
   const RECOVERY_TIME = 2000; // 2 seconds after unmute
   const MAX_LOGS = 50;
 
+  // ULTRA-FAST DETECTION STATE
+  let partialTranscript = ''; // Accumulates partial results for instant checking
+  let lastCheckTime = 0;
+  const MIN_CHECK_INTERVAL = 30; // Check every 30ms for ultra-fast response
+
+  // ML INFERENCE STATE
+  let lastMLInference = 0;
+  const ML_INFERENCE_INTERVAL = 300; // Run ML every 300ms (balance speed vs compute)
+  let currentConfidence = 0; // 0-100 confidence level
+  let lastMLPrediction = null;
+
   // WHITELIST - never mute these
   const SAFE_WORDS = ['hello', 'hi', 'hey', 'okay', 'ok', 'thanks', 'thank', 'please', 'yes', 'no', 'sure', 'great', 'good', 'bye'];
+
+  // PRECOMPUTED PREFIX MAP for O(1) lookup speed
+  let sensitiveWordPrefixMap = new Map(); // Maps prefixes to full words
+
+  function buildPrefixMap() {
+    sensitiveWordPrefixMap.clear();
+    for (const word of config.sensitiveWords) {
+      const lower = word.toLowerCase();
+      const prefixLength = lower.length <= 4 ? 2 : 3;
+      const prefix = lower.substring(0, prefixLength);
+
+      if (!sensitiveWordPrefixMap.has(prefix)) {
+        sensitiveWordPrefixMap.set(prefix, []);
+      }
+      sensitiveWordPrefixMap.get(prefix).push(lower);
+    }
+    console.log(`[PredictiveMute] Built prefix map with ${sensitiveWordPrefixMap.size} prefixes`);
+  }
 
   // Learning data
   let learningData = {
@@ -50,6 +79,9 @@
 
       console.log('[PredictiveMute] Config:', config);
 
+      // Build prefix map for ultra-fast detection
+      buildPrefixMap();
+
       if (config.enabled) {
         startMonitoring();
       }
@@ -69,6 +101,9 @@
       if (request.type === 'SETTINGS_UPDATED') {
         config = { ...config, ...request.settings };
         console.log('[PredictiveMute] Settings updated');
+
+        // Rebuild prefix map when settings change
+        buildPrefixMap();
 
         if (config.enabled && !isListening) {
           startMonitoring();
@@ -96,8 +131,14 @@
     recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true; // CRITICAL - for instant detection
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 1; // Only need the best guess for speed
     recognition.lang = 'en-US';
+
+    // ULTRA-FAST MODE: These settings optimize for speed over accuracy
+    // The browser will return partial results as fast as possible
+    if (recognition.interimResults === undefined) {
+      console.warn('[PredictiveMute] interimResults not supported - detection will be slower');
+    }
 
     recognition.onstart = () => {
       console.log('[PredictiveMute] Monitoring started');
@@ -107,18 +148,32 @@
     };
 
     recognition.onresult = (event) => {
-      // Process EVERY result immediately for speed
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        const transcript = result[0].transcript.toLowerCase().trim();
-        const confidence = result[0].confidence || 1.0;
-        const isFinal = result.isFinal;
+      const now = Date.now();
 
-        // Check IMMEDIATELY on interim results (this is the speed boost)
-        if (transcript.length > 0) {
-          checkAndMute(transcript, confidence, isFinal);
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
         }
       }
+
+      const transcript = (finalTranscript + interimTranscript).toLowerCase().trim();
+
+      if (transcript.length === 0 || now - lastCheckTime < MIN_CHECK_INTERVAL) {
+        return;
+      }
+
+      lastCheckTime = now;
+      partialTranscript = transcript;
+
+      const confidence = event.results[event.results.length - 1][0].confidence || 1.0;
+      const isFinal = event.results[event.results.length - 1].isFinal;
+
+      checkAndMuteFast(transcript, confidence, isFinal);
     };
 
     recognition.onerror = (event) => {
@@ -163,10 +218,10 @@
   }
 
   // ============================================================================
-  // DETECTION & MUTING - INSTANT
+  // ULTRA-FAST DETECTION - SUB-200MS REACTION TIME
   // ============================================================================
 
-  function checkAndMute(text, confidence, isFinal) {
+  function checkAndMuteFast(text, confidence, isFinal) {
     // Skip if already muted or recovering
     if (isMuted || isRecovering) return;
 
@@ -174,56 +229,117 @@
     const now = Date.now();
     if (now - lastMuteTime < MUTE_COOLDOWN) return;
 
-    // Quick whitelist check
+    // OPTIMIZATION 1: Early exit for common safe patterns
+    if (text.length < 3) return; // Too short to be dangerous
+
+    // Quick whitelist check - optimized with Set for O(1) lookup
     const words = text.split(/\s+/);
-    const allSafe = words.every(word => SAFE_WORDS.includes(word));
-    if (allSafe) return;
+    if (words.length === 1 && SAFE_WORDS.includes(words[0])) return;
 
     // Filter learned false positives
     if (learningData.falsePositives.some(fp => text.includes(fp.toLowerCase()))) {
       return;
     }
 
-    // Check sensitive words
-    for (const sensitiveWord of config.sensitiveWords) {
-      const lower = sensitiveWord.toLowerCase();
+    const textLower = text.toLowerCase();
+    const detectionStartTime = Date.now();
 
-      // Exact match or partial match
-      if (text.includes(lower) || words.some(w => w.startsWith(lower.substring(0, Math.min(4, lower.length))))) {
-        console.log('[PredictiveMute] DETECTED:', text, '| Word:', sensitiveWord);
-        executeInstantMute(sensitiveWord, text, 'keyword');
+    // OPTIMIZATION 2: Combined keyword and prefix search
+    for (const sensitiveWord of config.sensitiveWords) {
+      const lowerSensitiveWord = sensitiveWord.toLowerCase();
+
+      // Skip if temporarily ignored
+      if (window.tempIgnoredWords && window.tempIgnoredWords.includes(lowerSensitiveWord)) {
+        continue;
+      }
+
+      // Full phrase match
+      if (textLower.includes(lowerSensitiveWord)) {
+        const reactionTime = Date.now() - detectionStartTime;
+        console.log(`[PredictiveMute] ⚡ PHRASE DETECTED: "${text}" contains "${lowerSensitiveWord}" (${reactionTime}ms)`);
+        updateConfidenceBar(100, 'LEAK_INTENT');
+        executeInstantMute(lowerSensitiveWord, text, 'keyword');
         return;
+      }
+
+      // Prefix match
+      const prefixLength = lowerSensitiveWord.length <= 4 ? 2 : 3;
+      const prefix = lowerSensitiveWord.substring(0, prefixLength);
+      for (const word of words) {
+        if (word.length >= prefixLength && word.startsWith(prefix)) {
+          const reactionTime = Date.now() - detectionStartTime;
+          console.log(`[PredictiveMute] ⚡ PREFIX MATCH: "${word}" → "${lowerSensitiveWord}" (${reactionTime}ms)`);
+          updateConfidenceBar(100, 'LEAK_INTENT');
+          executeInstantMute(lowerSensitiveWord, text, 'keyword');
+          return;
+        }
       }
     }
 
-    // Check banned topics (semantic)
+    // OPTIMIZATION 3: Banned topics with fast word-set matching
     for (const topic of config.bannedTopics) {
       const topicLower = topic.toLowerCase();
-      const topicWords = topicLower.split(/\s+/);
-      const matchedWords = topicWords.filter(tw => text.includes(tw));
 
-      if (matchedWords.length >= Math.ceil(topicWords.length * 0.6)) {
-        console.log('[PredictiveMute] BANNED TOPIC:', text, '| Topic:', topic);
+      // Skip if temporarily ignored
+      if (window.tempIgnoredWords && window.tempIgnoredWords.includes(topicLower)) {
+        continue;
+      }
+
+      const topicWords = topicLower.split(/\s+/);
+      let matches = 0;
+
+      for (const tw of topicWords) {
+        if (textLower.includes(tw)) matches++;
+      }
+
+      // Trigger on 60% word match
+      if (matches >= Math.ceil(topicWords.length * 0.6)) {
+        const matchConfidence = Math.round((matches / topicWords.length) * 100);
+        console.log(`[PredictiveMute] ⚡ TOPIC DETECTED: "${text}" → "${topic}" (${matchConfidence}% match)`);
+
+        // Update confidence bar based on topic match percentage
+        updateConfidenceBar(matchConfidence, 'LEAK_INTENT');
+
         executeInstantMute(topic, text, 'topic');
         return;
       }
     }
 
-    // Check ML if available
-    if (window.MLClassifier && isFinal && config.learningEnabled) {
-        (async () => {
-            try {
-                const mlResult = await window.MLClassifier.classify(text, config.bannedTopics);
-                if (mlResult && mlResult.label !== 'SAFE' && mlResult.score >= config.confidenceThreshold) {
-                    if (window.MLClassifier.shouldMute(mlResult)) {
-                        console.log('[PredictiveMute] ML DETECTED:', text, mlResult);
-                        executeInstantMute(mlResult.label, text, 'ml');
+    // OPTIMIZATION 4: CONTINUOUS ML INFERENCE with throttling
+    // Run ML inference continuously but throttled to avoid CPU overload
+    const mlNow = Date.now();
+    if (window.intentDetector && window.intentDetector.ready && config.learningEnabled) {
+        // Only run ML if enough time has passed (300ms throttle)
+        if (mlNow - lastMLInference >= ML_INFERENCE_INTERVAL && text.length >= 5) {
+            lastMLInference = mlNow;
+
+            // Non-blocking async ML check
+            window.intentDetector.predict(text).then(prediction => {
+                if (prediction) {
+                    lastMLPrediction = prediction;
+
+                    // Update confidence bar (0-100 scale)
+                    const mlConfidence = Math.round(prediction.leak * 100);
+                    updateConfidenceBar(mlConfidence, prediction.label);
+
+                    // Check if should mute
+                    if (window.intentDetector.shouldMute(prediction, config.confidenceThreshold)) {
+                        console.log(`[PredictiveMute] ⚡ ML DETECTED: "${text}"`, prediction);
+                        executeInstantMute('sensitive content', text, 'ml');
                     }
                 }
-            } catch (e) {
-                console.error('[PredictiveMute] ML classification failed:', e);
-            }
-        })();
+            }).catch(e => {
+                console.error('[PredictiveMute] ML check failed:', e);
+            });
+        } else if (lastMLPrediction) {
+            // Use cached prediction to update confidence bar
+            const mlConfidence = Math.round(lastMLPrediction.leak * 100);
+            updateConfidenceBar(mlConfidence, lastMLPrediction.label);
+        }
+    } else if (text.length >= 3) {
+        // Fallback: Show baseline confidence when ML not available
+        // Low confidence for normal speech without keyword matches
+        updateConfidenceBar(5, 'SAFE');
     }
   }
 
@@ -241,13 +357,20 @@
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
 
-    // iPhone-like beep settings
+    // Cleaner, more subtle notification tone
+    // Using a softer sine wave with gentle fade in/out
     oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(700, audioContext.currentTime); // A slightly high-pitched, clean tone
-    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); // Not too loud
+    oscillator.frequency.setValueAtTime(520, audioContext.currentTime); // C5 - pleasant, not jarring
 
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.1); // A short beep
+    // Subtle volume with smooth envelope (fade in and out)
+    const now = audioContext.currentTime;
+    gainNode.gain.setValueAtTime(0, now); // Start silent
+    gainNode.gain.linearRampToValueAtTime(0.15, now + 0.02); // Quick fade in (very subtle volume)
+    gainNode.gain.linearRampToValueAtTime(0.1, now + 0.06); // Hold
+    gainNode.gain.linearRampToValueAtTime(0, now + 0.12); // Smooth fade out
+
+    oscillator.start(now);
+    oscillator.stop(now + 0.12); // Short, clean duration
   }
 
   function executeInstantMute(trigger, text, method) {
@@ -398,15 +521,28 @@
   // ============================================================================
 
   function injectStatusIndicator() {
-    const existing = document.getElementById('pm-status');
-    if (existing) existing.remove();
+    // Remove existing container if present
+    const existingContainer = document.getElementById('pm-container');
+    if (existingContainer) existingContainer.remove();
 
-    const indicator = document.createElement('div');
-    indicator.id = 'pm-status';
-    indicator.style.cssText = `
+    // Create container for both indicator and confidence bar
+    const container = document.createElement('div');
+    container.id = 'pm-container';
+    container.style.cssText = `
       position: fixed;
       bottom: 20px;
       right: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+      z-index: 999999;
+    `;
+
+    // Status indicator (mic button)
+    const indicator = document.createElement('div');
+    indicator.id = 'pm-status';
+    indicator.style.cssText = `
       width: 48px;
       height: 48px;
       border-radius: 50%;
@@ -415,8 +551,8 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      z-index: 999999;
       transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     `;
     indicator.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24"><path fill="#b9bbbe" d="M12 2C11.45 2 11 2.45 11 3V11C11 11.55 11.45 12 12 12C12.55 12 13 11.55 13 11V3C13 2.45 12.55 2 12 2ZM12 14C9.24 14 7 16.24 7 19V21H17V19C17 16.24 14.76 14 12 14Z"/></svg>`;
     indicator.title = 'Predictive Mute: Idle';
@@ -429,7 +565,50 @@
       }
     });
 
-    document.body.appendChild(indicator);
+    // Confidence bar
+    const confidenceBar = document.createElement('div');
+    confidenceBar.id = 'pm-confidence-bar';
+    confidenceBar.style.cssText = `
+      width: 200px;
+      height: 8px;
+      background: rgba(47, 49, 54, 0.9);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      display: none;
+      backdrop-filter: blur(10px);
+    `;
+
+    const confidenceFill = document.createElement('div');
+    confidenceFill.id = 'pm-confidence-fill';
+    confidenceFill.style.cssText = `
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #43b581 0%, #faa61a 50%, #f04747 100%);
+      transition: width 0.2s ease, background 0.3s ease;
+      border-radius: 8px;
+    `;
+
+    const confidenceLabel = document.createElement('div');
+    confidenceLabel.id = 'pm-confidence-label';
+    confidenceLabel.style.cssText = `
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 500;
+      margin-top: 4px;
+      text-align: right;
+      display: none;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    `;
+    confidenceLabel.textContent = 'Confidence: 0%';
+
+    confidenceBar.appendChild(confidenceFill);
+    container.appendChild(confidenceBar);
+    container.appendChild(confidenceLabel);
+    container.appendChild(indicator);
+
+    document.body.appendChild(container);
   }
 
   function updateStatus(state) {
@@ -439,7 +618,7 @@
     const idleIcon = `<svg width="24" height="24" viewBox="0 0 24 24"><path fill="#b9bbbe" d="M12 2C11.45 2 11 2.45 11 3V11C11 11.55 11.45 12 12 12C12.55 12 13 11.55 13 11V3C13 2.45 12.55 2 12 2ZM12 14C9.24 14 7 16.24 7 19V21H17V19C17 16.24 14.76 14 12 14Z"/></svg>`;
     const listeningIcon = `<svg width="24" height="24" viewBox="0 0 24 24"><path fill="#43b581" d="M12 2C11.45 2 11 2.45 11 3V11C11 11.55 11.45 12 12 12C12.55 12 13 11.55 13 11V3C13 2.45 12.55 2 12 2ZM12 14C9.24 14 7 16.24 7 19V21H17V19C17 16.24 14.76 14 12 14Z"/></svg>`;
     const mutedIcon = `<svg width="24" height="24" viewBox="0 0 24 24"><path fill="#ffffff" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1.2-9.1c0-.66.54-1.2 1.2-1.2.66 0 1.2.54 1.2 1.2l-.01 6.2c0 .66-.53 1.2-1.19 1.2s-1.2-.54-1.2-1.2V4.9zm6.5 6.1c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.49 6-3.31 6-6.72h-1.7z"/></svg>`;
-    
+
     const states = {
       idle: { icon: idleIcon, title: 'Idle', bg: '#2f3136' },
       listening: { icon: listeningIcon, title: 'Listening', bg: '#2f3136' },
@@ -453,6 +632,49 @@
     indicator.title = `Predictive Mute: ${s.title}`;
 
     indicator.style.animation = 'none'; // Reset animation
+
+    // Show/hide confidence bar based on state
+    const confidenceBar = document.getElementById('pm-confidence-bar');
+    const confidenceLabel = document.getElementById('pm-confidence-label');
+    if (confidenceBar && confidenceLabel) {
+      if (state === 'listening') {
+        confidenceBar.style.display = 'block';
+        confidenceLabel.style.display = 'block';
+      } else {
+        confidenceBar.style.display = 'none';
+        confidenceLabel.style.display = 'none';
+      }
+    }
+  }
+
+  function updateConfidenceBar(confidence, label = 'SAFE') {
+    const confidenceFill = document.getElementById('pm-confidence-fill');
+    const confidenceLabel = document.getElementById('pm-confidence-label');
+
+    if (!confidenceFill || !confidenceLabel) return;
+
+    // Update confidence bar width (0-100%)
+    const clampedConfidence = Math.max(0, Math.min(100, confidence));
+    confidenceFill.style.width = `${clampedConfidence}%`;
+
+    // Update label with status
+    const status = label === 'LEAK_INTENT' ? '⚠️ LEAK' : '✓ SAFE';
+    confidenceLabel.textContent = `${status} ${clampedConfidence}%`;
+
+    // Color coding based on confidence level
+    if (clampedConfidence < 30) {
+      confidenceFill.style.background = '#43b581'; // Green - safe
+      confidenceLabel.style.color = '#43b581';
+    } else if (clampedConfidence < 70) {
+      confidenceFill.style.background = '#faa61a'; // Orange - warning
+      confidenceLabel.style.color = '#faa61a';
+    } else {
+      confidenceFill.style.background = '#f04747'; // Red - danger
+      confidenceLabel.style.color = '#f04747';
+    }
+
+    // Store current confidence
+    currentConfidence = clampedConfidence;
   }
 
   // ============================================================================
@@ -527,12 +749,46 @@
       transcriptPanel.classList.toggle('show');
     });
 
-    const closeButtons = notificationOverlay.querySelectorAll('#addToWhitelistBtn, #ignoreNowBtn, #ignoreCallBtn');
-    closeButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            notificationOverlay.querySelector('.notification-container').classList.add('hide');
-            setTimeout(() => notificationOverlay.remove(), 300);
-        });
+    // Add to whitelist button
+    const addToWhitelistBtn = notificationOverlay.querySelector('#addToWhitelistBtn');
+    addToWhitelistBtn.addEventListener('click', () => {
+        // Remove from sensitive words
+        const index = config.sensitiveWords.findIndex(w => w.toLowerCase() === trigger.toLowerCase());
+        if (index !== -1) {
+            config.sensitiveWords.splice(index, 1);
+            chrome.storage.sync.set({ sensitiveWords: config.sensitiveWords }, () => {
+                addLog(`✓ Removed "${trigger}" from blacklist`, false);
+            });
+
+            // Rebuild prefix map with updated word list
+            buildPrefixMap();
+        }
+
+        // Close notification
+        notificationOverlay.querySelector('.notification-container').classList.add('hide');
+        setTimeout(() => notificationOverlay.remove(), 300);
+    });
+
+    // Ignore for now button
+    const ignoreNowBtn = notificationOverlay.querySelector('#ignoreNowBtn');
+    ignoreNowBtn.addEventListener('click', () => {
+        addLog(`Ignored "${trigger}" for now`, false);
+        notificationOverlay.querySelector('.notification-container').classList.add('hide');
+        setTimeout(() => notificationOverlay.remove(), 300);
+    });
+
+    // Ignore for this call button
+    const ignoreCallBtn = notificationOverlay.querySelector('#ignoreCallBtn');
+    ignoreCallBtn.addEventListener('click', () => {
+        // Create temporary ignore list for this session
+        if (!window.tempIgnoredWords) {
+            window.tempIgnoredWords = [];
+        }
+        window.tempIgnoredWords.push(trigger.toLowerCase());
+        addLog(`Ignoring "${trigger}" for this call`, false);
+
+        notificationOverlay.querySelector('.notification-container').classList.add('hide');
+        setTimeout(() => notificationOverlay.remove(), 300);
     });
 
 

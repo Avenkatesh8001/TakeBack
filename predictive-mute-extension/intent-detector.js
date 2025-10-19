@@ -1,18 +1,18 @@
 // ONNX-based Intent Detection for Predictive Muting
-// Uses fine-tuned MiniLM model running locally in browser via onnxruntime-web
-// Detects leak-intent BEFORE sensitive words are spoken
+// Uses fine-tuned DeBERTa model running locally in browser via onnxruntime-web
+// Detects PII leak-intent BEFORE sensitive words are spoken
 
 (function() {
   'use strict';
 
-  // Import onnxruntime-web from CDN (fallback if npm install doesn't work)
+  // Import onnxruntime-web and transformers.js from CDN
   const ONNX_RUNTIME_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js';
+  const TRANSFORMERS_CDN = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.11.0';
 
   class IntentDetector {
     constructor() {
       this.session = null;
-      this.vocab = null;
-      this.tokenizerConfig = null;
+      this.tokenizer = null;
       this.ready = false;
       this.loading = false;
       this.lastInferenceTime = 0;
@@ -24,41 +24,41 @@
       if (this.ready || this.loading) return;
 
       this.loading = true;
-      console.log('[IntentDetector] Initializing ONNX Runtime...');
+      console.log('[IntentDetector] Initializing ONNX Runtime and Transformers.js...');
 
       try {
-        // Load ONNX Runtime
-        await this.loadONNXRuntime();
+        // Load ONNX Runtime and Transformers.js in parallel
+        await Promise.all([
+          this.loadScript('onnxruntime', ONNX_RUNTIME_CDN),
+          this.loadScript('transformers', TRANSFORMERS_CDN)
+        ]);
 
-        // Configure for performance
+        this.ort = window.ort;
+        const { AutoTokenizer } = window.Transformers;
+
+        // Configure ONNX Runtime for performance
         this.ort.env.wasm.numThreads = 2;
         this.ort.env.wasm.simd = true;
 
-        // Load model files
-        const modelUrl = chrome.runtime.getURL('models/intent_classifier.onnx');
-        const vocabUrl = chrome.runtime.getURL('models/vocab.json');
-        const configUrl = chrome.runtime.getURL('models/tokenizer_config.json');
+        // Load model and tokenizer files
+        const modelUrl = 'https://huggingface.co/pavidu/piiranha-v1-detect-personal-information-onnx/resolve/main/model.onnx';
+        const tokenizerUrl = 'iiiorg/piiranha-v1-detect-personal-information';
 
-        console.log('[IntentDetector] Loading model files...');
+        console.log('[IntentDetector] Loading model and tokenizer...');
 
-        // Load vocab and config in parallel
-        const [vocabResponse, configResponse] = await Promise.all([
-          fetch(vocabUrl),
-          fetch(configUrl)
+        // Load tokenizer and create inference session in parallel
+        const [tokenizer, session] = await Promise.all([
+          AutoTokenizer.from_pretrained(tokenizerUrl),
+          this.ort.InferenceSession.create(modelUrl, {
+            executionProviders: ['wasm'],
+            graphOptimizationLevel: 'all',
+            enableCpuMemArena: true,
+            enableMemPattern: true
+          })
         ]);
 
-        this.vocab = await vocabResponse.json();
-        this.tokenizerConfig = await configResponse.json();
-
-        // Create inference session
-        console.log('[IntentDetector] Creating inference session...');
-        this.session = await this.ort.InferenceSession.create(modelUrl, {
-          executionProviders: ['wasm'],
-          graphOptimizationLevel: 'all',
-          enableCpuMemArena: true,
-          enableMemPattern: true
-        });
-
+        this.tokenizer = tokenizer;
+        this.session = session;
         this.ready = true;
         this.loading = false;
 
@@ -68,7 +68,7 @@
         console.log('[IntentDetector] ✓ Model loaded successfully');
         console.log('[IntentDetector]   Inputs:', inputNames);
         console.log('[IntentDetector]   Outputs:', outputNames);
-        console.log('[IntentDetector]   Vocab size:', Object.keys(this.vocab).length);
+        console.log('[IntentDetector]   Tokenizer:', tokenizer.constructor.name);
 
       } catch (error) {
         console.error('[IntentDetector] Failed to load model:', error);
@@ -78,83 +78,32 @@
       }
     }
 
-    async loadONNXRuntime() {
-      // Try to use npm installed version first
-      if (typeof window.ort !== 'undefined') {
-        this.ort = window.ort;
-        console.log('[IntentDetector] Using window.ort');
-        return;
-      }
-
-      // Fallback to CDN
-      console.log('[IntentDetector] Loading ONNX Runtime from CDN...');
+    async loadScript(id, src) {
       return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = ONNX_RUNTIME_CDN;
-        script.onload = () => {
-          this.ort = window.ort;
-          console.log('[IntentDetector] ✓ ONNX Runtime loaded from CDN');
+        if (document.getElementById(id)) {
           resolve();
-        };
-        script.onerror = () => {
-          reject(new Error('Failed to load ONNX Runtime from CDN'));
-        };
+          return;
+        }
+        const script = document.createElement('script');
+        script.id = id;
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
         document.head.appendChild(script);
       });
     }
 
-    // Simple tokenizer (compatible with MiniLM)
-    tokenize(text) {
-      if (!this.vocab || !this.tokenizerConfig) {
-        throw new Error('Tokenizer not initialized');
-      }
-
-      const maxLength = this.tokenizerConfig.max_length || 32;
-      const padTokenId = this.tokenizerConfig.pad_token_id || 0;
-      const clsTokenId = this.tokenizerConfig.cls_token_id || 101;
-      const sepTokenId = this.tokenizerConfig.sep_token_id || 102;
-      const unkTokenId = this.tokenizerConfig.unk_token_id || 100;
-
-      // Simple word-level tokenization
-      const words = text.toLowerCase()
-        .replace(/[^\w\s]/g, ' ')
-        .split(/\s+/)
-        .filter(w => w.length > 0);
-
-      // Convert words to token IDs
-      const tokenIds = [clsTokenId];
-
-      for (const word of words) {
-        if (tokenIds.length >= maxLength - 1) break;
-
-        // Look up token in vocab
-        let tokenId = this.vocab[word];
-
-        // Try subword tokenization if word not found
-        if (tokenId === undefined) {
-          tokenId = unkTokenId;
+    // Tokenizer using transformers.js
+    async tokenize(text) {
+        if (!this.tokenizer) {
+            throw new Error('Tokenizer not initialized');
         }
-
-        tokenIds.push(tokenId);
-      }
-
-      // Add SEP token
-      tokenIds.push(sepTokenId);
-
-      // Pad to maxLength
-      const paddingLength = maxLength - tokenIds.length;
-      const paddedTokenIds = [...tokenIds, ...Array(paddingLength).fill(padTokenId)];
-
-      // Create attention mask (1 for real tokens, 0 for padding)
-      const attentionMask = [
-        ...Array(tokenIds.length).fill(1),
-        ...Array(paddingLength).fill(0)
-      ];
-
-      return {
-        input_ids: paddedTokenIds.slice(0, maxLength),
-        attention_mask: attentionMask.slice(0, maxLength)
-      };
+        return this.tokenizer(text, {
+            padding: 'max_length',
+            truncation: true,
+            max_length: 256,
+            return_tensors: 'ort'
+        });
     }
 
     // Run inference on text
@@ -175,50 +124,33 @@
         const startTime = performance.now();
 
         // Tokenize input
-        const { input_ids, attention_mask } = this.tokenize(text);
-
-        // Create tensors (ONNX expects int64)
-        const inputIdsTensor = new this.ort.Tensor(
-          'int64',
-          BigInt64Array.from(input_ids.map(BigInt)),
-          [1, input_ids.length]
-        );
-
-        const attentionMaskTensor = new this.ort.Tensor(
-          'int64',
-          BigInt64Array.from(attention_mask.map(BigInt)),
-          [1, attention_mask.length]
-        );
+        const model_inputs = await this.tokenize(text);
 
         // Run inference
-        const feeds = {
-          input_ids: inputIdsTensor,
-          attention_mask: attentionMaskTensor
-        };
-
-        const results = await this.session.run(feeds);
-
-        // Extract logits
-        const logitsData = results.logits.data;
-        const safeLogit = logitsData[0];
-        const leakLogit = logitsData[1];
-
-        // Apply softmax
-        const scores = this.softmax([safeLogit, leakLogit]);
+        const results = await this.session.run(model_inputs);
+        const logits = results.logits;
+        
+        const predictions = [];
+        for (let i = 0; i < logits.dims[1]; ++i) {
+            const tokenLogits = Array.from(logits.data.slice(i * logits.dims[2], (i + 1) * logits.dims[2]));
+            const labelIndex = tokenLogits.indexOf(Math.max(...tokenLogits));
+            predictions.push(this.tokenizer.model.config.id2label[labelIndex]);
+        }
 
         const latency = performance.now() - startTime;
 
+        const hasPII = predictions.some(p => p !== 'O');
         const result = {
-          safe: scores[0],
-          leak: scores[1],
-          label: scores[1] > scores[0] ? 'LEAK_INTENT' : 'SAFE',
-          confidence: Math.max(scores[0], scores[1]),
-          latency: latency
+          hasPII: hasPII,
+          predictions: predictions,
+          latency: latency,
+          label: hasPII ? 'LEAK_INTENT' : 'SAFE',
+          leak: hasPII ? 1 : 0,
         };
 
         console.log(
           `[IntentDetector] "${text.substring(0, 40)}..." → ${result.label} ` +
-          `(${(result.confidence * 100).toFixed(1)}%) [${latency.toFixed(1)}ms]`
+          `(${(result.leak * 100).toFixed(1)}%) [${latency.toFixed(1)}ms]`
         );
 
         return result;
@@ -240,7 +172,7 @@
     // Check if should mute based on prediction
     shouldMute(prediction, threshold = 0.7) {
       if (!prediction) return false;
-      return prediction.label === 'LEAK_INTENT' && prediction.confidence >= threshold;
+      return prediction.label === 'LEAK_INTENT';
     }
 
     // Get status for debugging
@@ -248,8 +180,8 @@
       return {
         ready: this.ready,
         loading: this.loading,
-        vocabSize: this.vocab ? Object.keys(this.vocab).length : 0,
-        modelLoaded: this.session !== null
+        modelLoaded: this.session !== null,
+        tokenizerLoaded: this.tokenizer !== null
       };
     }
   }
