@@ -1,0 +1,13 @@
+{
+  "max_length": 32,
+  "padding": "max_length",
+  "truncation": true,
+  "pad_token": "[PAD]",
+  "unk_token": "[UNK]",
+  "sep_token": "[SEP]",
+  "cls_token": "[CLS]",
+  "pad_token_id": 0,
+  "unk_token_id": 100,
+  "sep_token_id": 102,
+  "cls_token_id": 101
+}

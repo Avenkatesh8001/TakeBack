@@ -1,10 +1,13 @@
 {
   "name": "predictive-mute-extension",
-  "version": "1.0.0",
-  "description": "Chrome extension for predictive muting of sensitive content in online meetings",
+  "version": "2.0.0",
+  "description": "Chrome extension for predictive muting with ONNX-based ML intent detection",
   "main": "background.js",
   "scripts": {
     "create-icons": "node create-icons.js",
+    "install-deps": "npm install",
+    "train-model": "cd ml-training && python train_intent_model.py",
+    "convert-model": "cd ml-training && python convert_to_onnx.py",
     "test": "echo \"No tests yet - see README for manual testing\" && exit 0"
   },
   "keywords": [
@@ -15,10 +18,13 @@
     "zoom",
     "predictive",
     "mute",
-    "hackathon"
+    "machine-learning",
+    "onnx"
   ],
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {},
-  "dependencies": {}
+  "dependencies": {
+    "onnxruntime-web": "^1.16.3"
+  }
 }

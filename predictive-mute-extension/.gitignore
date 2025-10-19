@@ -15,6 +15,14 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# ML Training artifacts (too large for GitHub)
+ml-training/fine-tuned-intent-model/
+ml-training/intent-model-checkpoints/
+ml-training/onnx-models/
+
+# Keep only the final models in models/ directory
+# models/ directory contains the quantized model for the extension
+
 # Optional: Ignore generated PNG icons if you regenerate them
 # Uncomment if you want to regenerate icons for each clone
 # icons/*.png

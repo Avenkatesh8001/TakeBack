@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Predictive Mute for Meetings",
-  "version": "1.0.0",
-  "description": "A Chrome extension that detects and prevents accidental disclosure of sensitive information during Google Meet and Zoom calls.",
+  "version": "2.0.0",
+  "description": "AI-powered predictive muting with ONNX-based intent detection for Google Meet and Zoom calls.",
   "permissions": [
     "storage",
     "scripting"
   ],
   "host_permissions": [
     "*://meet.google.com/*",
-    "*://*.zoom.us/*"
+    "*://*.zoom.us/*",
+    "*://teams.microsoft.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -31,9 +32,28 @@
     {
       "matches": [
         "*://meet.google.com/*",
-        "*://*.zoom.us/*"
+        "*://*.zoom.us/*",
+        "*://teams.microsoft.com/*"
       ],
-      "js": ["ml-classifier.js", "content-final.js"]
+      "js": [
+        "intent-detector.js",
+        "feedback-collector.js",
+        "ml-classifier.js",
+        "content-final.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "models/*.onnx",
+        "models/*.json"
+      ],
+      "matches": [
+        "*://meet.google.com/*",
+        "*://*.zoom.us/*",
+        "*://teams.microsoft.com/*"
+      ]
     }
   ]
 }

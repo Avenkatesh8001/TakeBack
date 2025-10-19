@@ -198,7 +198,7 @@
     }
   }
 
-  // Main classification function
+  // Main classification function with ONNX intent detection
   async function classify(text, bannedTopics = []) {
     if (!text || text.trim().length === 0) {
       return { label: LABELS.SAFE, score: 1.0, method: 'empty' };
@@ -212,7 +212,25 @@
       }
     }
 
-    // Try ML first if model is loaded
+    // PRIORITY 1: Try ONNX intent detector (most accurate, predictive)
+    if (window.intentDetector && window.intentDetector.ready) {
+      try {
+        const intentResult = await window.intentDetector.predict(text);
+        if (intentResult && intentResult.label === 'LEAK_INTENT' && intentResult.confidence >= 0.7) {
+          // ONNX detected leak intent
+          return {
+            label: LABELS.CONFIDENTIAL,
+            score: intentResult.confidence,
+            method: 'onnx-intent',
+            intentResult: intentResult
+          };
+        }
+      } catch (error) {
+        console.warn('[ML-Classifier] ONNX intent detection failed:', error);
+      }
+    }
+
+    // PRIORITY 2: Try Transformers.js if model is loaded
     if (modelLoaded) {
       try {
         return await classifyByML(text);
@@ -221,7 +239,7 @@
       }
     }
 
-    // Fall back to keywords
+    // PRIORITY 3: Fall back to keywords
     return classifyByKeywords(text);
   }
 
@@ -320,13 +338,18 @@
     shouldMute,
     getRiskLevel,
     isModelLoaded: () => modelLoaded,
+    isONNXReady: () => window.intentDetector && window.intentDetector.ready,
+    getONNXStatus: () => window.intentDetector ? window.intentDetector.getStatus() : { ready: false },
     LABELS
   };
 
-  // Auto-load model on script load (async, non-blocking)
+  // Auto-load Transformers.js model (async, non-blocking)
   loadModel().catch(err => {
-    console.warn('[ML-Classifier] Model auto-load failed:', err);
+    console.warn('[ML-Classifier] Transformers.js model auto-load failed:', err);
   });
 
-  console.log('[ML-Classifier] Module loaded. Using keyword-based classification until ML model loads.');
+  // ONNX intent detector loads automatically via intent-detector.js
+
+  console.log('[ML-Classifier] Module loaded. Using keyword-based classification until ML models load.');
+  console.log('[ML-Classifier] Detection priority: ONNX Intent → Transformers.js → Keywords');
 })();

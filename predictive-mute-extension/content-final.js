@@ -526,6 +526,18 @@
       addLog(`✗ False positive: "${text}"`, true);
     }
     chrome.storage.local.set({ learningData });
+
+    // Record feedback in feedback collector for model retraining
+    if (window.feedbackCollector) {
+      const detectionResult = {
+        decision: 'MUTE',
+        confidence: 0.8, // Default confidence
+        reason: trigger,
+        breakdown: {}
+      };
+      const userLabel = isCorrect ? 1 : 0; // 1=leak, 0=safe
+      window.feedbackCollector.recordFeedback(text, detectionResult, userLabel);
+    }
   }
 
   // ============================================================================
