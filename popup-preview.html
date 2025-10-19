@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TakeBack Extension Preview</title>
+  <link rel="stylesheet" href="popup-preview.css">
+</head>
+<body>
+  <div class="preview-container">
+    <div class="preview-header">
+      <h2>TakeBack Extension Popup Preview</h2>
+      <p>This is how the extension popup will look when clicked in the browser toolbar</p>
+    </div>
+    
+    <div class="popup-container">
+    <!-- Left Sidebar with Presets -->
+    <div class="sidebar">
+      <div class="preset-buttons">
+        <button class="preset-btn" data-preset="0"></button>
+        <button class="preset-btn active" data-preset="1"></button>
+        <button class="preset-btn" data-preset="2"></button>
+        <button class="preset-btn" data-preset="3"></button>
+        <button class="preset-btn" data-preset="4"></button>
+      </div>
+    </div>
+
+      <!-- Main Content Area -->
+      <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+          <div class="preset-info">
+            <div class="preset-icon"></div>
+            <span class="preset-name" id="presetName" contenteditable="true">Untitled #2</span>
+          </div>
+          <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 4L8 12L16 20" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M8 4L0 12L8 20" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Content Panels -->
+        <div class="content-panels">
+        <!-- Whitelist Panel -->
+        <div class="panel whitelist-panel">
+          <div class="panel-header">
+            <span class="panel-label">Whitelist</span>
+          </div>
+          <div class="panel-content">
+            <textarea class="list-textarea" id="whitelistTextarea" placeholder="Enter safe words or phrases here...&#10;One item per line&#10;&#10;Examples:&#10;hello&#10;good morning&#10;thank you"></textarea>
+          </div>
+        </div>
+
+        <!-- Blacklist Panel -->
+        <div class="panel blacklist-panel">
+          <div class="panel-header">
+            <span class="panel-label">Blacklist</span>
+          </div>
+          <div class="panel-content">
+            <textarea class="list-textarea" id="blacklistTextarea" placeholder="Enter dangerous words or phrases here...&#10;One item per line&#10;&#10;Examples:&#10;password&#10;API key&#10;confidential&#10;revenue"></textarea>
+          </div>
+        </div>
+        </div>
+
+        <!-- Strength Slider -->
+        <div class="strength-section">
+          <span class="strength-label">Strength</span>
+          <div class="slider-container">
+            <input type="range" id="strengthSlider" class="strength-slider" min="0" max="100" value="60">
+            <span class="strength-value" id="strengthValue">Moderately Strict</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <button class="btn btn-cancel" id="cancelBtn">Cancel</button>
+        <button class="btn btn-continue" id="continueBtn">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

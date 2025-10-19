@@ -1,96 +1,127 @@
-# TakeBack
+# TakeBack Notification System
 
-Real-time confidential information protection for Google Meet using AI.
+A complete notification system for handling microphone muting notifications when users discuss blacklisted or non-whitelisted topics.
 
-## Overview
+## 🚀 Quick Start
 
-TakeBack is an Electron-based desktop overlay that monitors your audio during Google Meet calls and prevents you from accidentally sharing confidential information. It uses OpenAI Whisper for speech-to-text and an LLM to analyze danger levels in real-time.
+1. **Copy the files** to your project:
+   - `notification.html`
+   - `notification.css` 
+   - `notification.js`
 
-## Features
+2. **Open `notification.html`** in your browser to test
 
-### Current (v0.1)
-- **Overlay Interface**: Always-on-top, transparent overlay widget
-- **Draggable Window**: Drag from the header to reposition
-- **Real-time Danger Meter**: Visual indicator (0-100) of risk level
-- **Live Transcription Display**: See what's being transcribed
-- **Activity Log**: Track all monitoring events with timestamps
-- **Configurable Settings**:
-  - Sensitivity levels (1-5)
-  - Custom confidential keywords
-  - Auto-mute toggle
-- **Demo Mode**: Simulated monitoring with sample phrases
+3. **Integrate with your backend** by modifying the `sendToBackend()` method in `notification.js`
 
-### Planned
-- [ ] Audio capture from system/microphone
-- [ ] OpenAI Whisper integration for speech-to-text
-- [ ] LLM integration for danger analysis
-- [ ] System-level mute control
-- [ ] Custom context/training for your confidential topics
-- [ ] Browser extension mode for Google Meet
+## 📁 Files Overview
 
-## Installation
+| File | Purpose |
+|------|---------|
+| `notification.html` | Main HTML structure for the notification popup |
+| `notification.css` | Dark theme styling with purple accents |
+| `notification.js` | JavaScript functionality and API integration |
+| `INTEGRATION_GUIDE.md` | Complete integration documentation |
+| `API_SPECIFICATION.md` | Detailed API specification |
+| `BACKEND_EXAMPLES.md` | Backend implementation examples |
 
-```bash
-npm install
+## 🎯 Features
+
+- **Dark theme** with purple accents matching your design
+- **Three notification types**: blacklisted, non-whitelisted, flagged content
+- **Interactive transcript panel** with show/hide functionality
+- **Keyboard shortcuts** (Escape to close, Enter to confirm)
+- **Responsive design** that works on all screen sizes
+- **Backend integration ready** with multiple communication options
+
+## 🔧 Integration
+
+### Basic Usage
+```javascript
+// Show a blacklisted topic notification
+window.takebackNotification.showBlacklistedTopic('confidential information', transcriptData);
+
+// Show a non-whitelisted topic notification  
+window.takebackNotification.showNonWhitelistedTopic('new topic', transcriptData);
+
+// Show flagged content notification
+window.takebackNotification.showFlaggedContent('sensitive content', transcriptData);
 ```
 
-## Usage
+### Backend Integration
+Replace the `sendToBackend()` method in `notification.js` with your API calls:
 
-```bash
-npm start
+```javascript
+sendToBackend(action, data) {
+  fetch('/api/takeback/notification', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, data })
+  });
+}
 ```
 
-## Overlay Controls
+## 📋 API Actions
 
-- **Header**: Drag to move the overlay
-- **Minimize Button**: Minimize to background
-- **Close Button**: Close the application
-- **Start/Stop**: Begin/end monitoring
-- **Settings**: Click to expand/collapse settings panel
+The system sends these actions to your backend:
 
-## Architecture
+- `add-to-whitelist` - User wants to add topic to whitelist
+- `ignore-now` - User wants to ignore this instance
+- `ignore-call` - User wants to ignore for entire call
 
-```
-Audio Input
-  ↓
-Whisper (Speech-to-Text)
-  ↓
-LLM (Danger Analysis)
-  ↓
-Decision Engine
-  ↓
-Auto-Mute (if danger > threshold)
+## 🎨 Customization
+
+### Colors
+Modify CSS variables in `notification.css`:
+```css
+:root {
+  --primary-bg: #282828;
+  --accent-color: #8b5cf6;
+  --text-color: #e2e8f0;
+}
 ```
 
-## Development
+### Layout
+Adjust the flexbox layout in the CSS for different arrangements.
 
-The app uses:
-- **Electron**: Desktop overlay framework
-- **Node.js**: Backend processing
-- **Vanilla JS**: Frontend interactions
-- **CSS3**: Modern UI with backdrop blur
+## 🧪 Testing
 
-### File Structure
+1. **Manual Testing**: Open `notification.html` and uncomment the test line in `notification.js`
+2. **API Testing**: Use the provided cURL examples in `BACKEND_EXAMPLES.md`
+3. **Integration Testing**: Test with your actual backend endpoints
 
-```
-TakeBack/
-├── main.js           # Main Electron process
-├── index.html        # Overlay UI structure
-├── styles.css        # Overlay styling
-├── renderer.js       # Frontend logic
-└── package.json      # Dependencies
-```
+## 📚 Documentation
 
-## Todo
+- **[Integration Guide](INTEGRATION_GUIDE.md)** - Complete setup and integration instructions
+- **[API Specification](API_SPECIFICATION.md)** - Detailed API documentation
+- **[Backend Examples](BACKEND_EXAMPLES.md)** - Implementation examples for Node.js, Python, PHP, Go
 
-- Integrate Whisper.cpp for fast local transcription
-- Connect to OpenAI/Anthropic API for LLM analysis
-- Implement actual audio capture
-- Add system-level mute control for macOS
-- Optimize for sub-second latency
-- Add visual warning flash before auto-mute
-- Post-meeting transcript export
+## 🔒 Security
 
-## License
+- Input validation on all user data
+- CSRF protection support
+- Rate limiting recommendations
+- XSS prevention measures
 
-ISC
+## 🌐 Browser Support
+
+- Chrome 60+
+- Firefox 55+
+- Safari 12+
+- Edge 79+
+
+## 📦 Dependencies
+
+- **None!** Pure vanilla JavaScript, HTML, and CSS
+- No external libraries required
+- Lightweight (~15KB total)
+
+## 🤝 Support
+
+For integration help:
+1. Check the documentation files
+2. Review the backend examples
+3. Test with the provided examples
+
+## 📄 License
+
+This notification system is ready for integration into your TakeBack application.

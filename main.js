@@ -5,7 +5,7 @@ let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 400,
+    width: 1000,
     height: 600,
     x: 50, // Position from left edge
     y: 50, // Position from top edge

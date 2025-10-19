@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TakeBack</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>TakeBack Extension</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="popup-container">
     <!-- Left Sidebar with Presets -->
     <div class="sidebar">
       <div class="preset-buttons">
-        <button class="preset-btn active" data-preset="0">1</button>
-        <button class="preset-btn" data-preset="1">2</button>
-        <button class="preset-btn" data-preset="2">3</button>
-        <button class="preset-btn" data-preset="3">4</button>
-        <button class="preset-btn" data-preset="4">5</button>
+        <button class="preset-btn" data-preset="0"></button>
+        <button class="preset-btn active" data-preset="1"></button>
+        <button class="preset-btn" data-preset="2"></button>
+        <button class="preset-btn" data-preset="3"></button>
+        <button class="preset-btn" data-preset="4"></button>
       </div>
     </div>
 
@@ -25,13 +25,13 @@
       <div class="header">
         <div class="preset-info">
           <div class="preset-icon"></div>
-          <span class="preset-name" id="presetName" contenteditable="true">Untitled #1</span>
+            <span class="preset-name" id="presetName" contenteditable="true">Untitled #2</span>
         </div>
         <div class="logo">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 4L8 12L16 20" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M8 4L0 12L8 20" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <div class="double-chevron">
+            <div class="chevron chevron-left"></div>
+            <div class="chevron chevron-right"></div>
+          </div>
         </div>
       </div>
 
@@ -43,8 +43,7 @@
             <span class="panel-label">Whitelist</span>
           </div>
           <div class="panel-content">
-            <div class="list-items" id="whitelistItems" contenteditable="true">
-            </div>
+            <textarea class="list-textarea" id="whitelistTextarea" placeholder="Enter safe words or phrases here...&#10;One item per line&#10;&#10;Examples:&#10;hello&#10;good morning&#10;thank you"></textarea>
           </div>
         </div>
 
@@ -54,8 +53,7 @@
             <span class="panel-label">Blacklist</span>
           </div>
           <div class="panel-content">
-            <div class="list-items" id="blacklistItems" contenteditable="true">
-            </div>
+            <textarea class="list-textarea" id="blacklistTextarea" placeholder="Enter dangerous words or phrases here...&#10;One item per line&#10;&#10;Examples:&#10;password&#10;API key&#10;confidential&#10;revenue"></textarea>
           </div>
         </div>
       </div>
@@ -64,8 +62,8 @@
       <div class="strength-section">
         <span class="strength-label">Strength</span>
         <div class="slider-container">
-          <input type="range" id="strictnessSlider" class="strength-slider" min="0" max="100" value="50" step="1">
-          <span class="strength-value" id="strictnessValue">Moderate</span>
+          <input type="range" id="strengthSlider" class="strength-slider" min="0" max="100" value="60">
+          <span class="strength-value" id="strengthValue">Moderately Strict</span>
         </div>
       </div>
     </div>
@@ -77,6 +75,6 @@
     </div>
   </div>
 
-  <script src="renderer.js"></script>
+  <script src="popup.js"></script>
 </body>
 </html>

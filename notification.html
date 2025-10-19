@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TakeBack Notification</title>
+  <link rel="stylesheet" href="notification.css">
+</head>
+<body>
+  <div class="notification-overlay">
+    <div class="notification-container">
+      <!-- Main Notification Panel -->
+      <div class="notification-panel">
+        <div class="notification-header">
+          <div class="notification-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 4L8 12L16 20" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M8 4L0 12L8 20" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="notification-content">
+            <p class="notification-message" id="notificationMessage">
+              We automatically muted your microphone because you talked about a blacklisted topic.
+            </p>
+          </div>
+        </div>
+
+        <div class="notification-actions">
+          <button class="btn btn-primary" id="addToWhitelistBtn">
+            Add topic to whitelist
+          </button>
+          
+          <div class="secondary-actions">
+            <button class="btn btn-secondary" id="ignoreNowBtn">
+              Ignore for now
+            </button>
+            <button class="btn btn-secondary" id="ignoreCallBtn">
+              Ignore for this call
+            </button>
+          </div>
+          
+          <a href="#" class="transcript-link" id="showTranscriptLink">
+            Show transcript
+          </a>
+        </div>
+      </div>
+
+      <!-- Transcript Panel (Hidden by default) -->
+      <div class="transcript-panel" id="transcriptPanel">
+        <div class="transcript-header">
+          <h3>Transcript</h3>
+        </div>
+        <div class="transcript-content" id="transcriptContent">
+          <p class="transcript-line">Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam</p>
+          <p class="transcript-line">nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam</p>
+          <p class="transcript-line">erat volutpat. Ut wisi enim ad minim veniam, quis nostrud</p>
+          <p class="transcript-line flagged">adipiscing elit, sed diam</p>
+          <p class="transcript-line">exerci tation ullamcorper suscipit lobortis nisl ut aliquip</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="notification.js"></script>
+</body>
+</html>
+

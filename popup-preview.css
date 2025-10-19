@@ -1,16 +1,39 @@
-/* Main application styles */
+/* Preview page styles */
 body {
   margin: 0;
   padding: 20px;
   background: #f5f5f5;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
 }
 
-/* Extension popup styles */
+.preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.preview-header {
+  text-align: center;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+}
+
+.preview-header h2 {
+  margin: 0 0 8px 0;
+  color: #333;
+}
+
+.preview-header p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Extension popup styles (same as popup.css but with fixed dimensions) */
 .popup-container {
   width: 600px;
   height: 600px;
@@ -53,23 +76,15 @@ body {
   background: #3a3a3a;
   cursor: pointer;
   transition: all 0.2s;
-  color: #a0a0a0;
-  font-size: 11px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .preset-btn:hover {
   background: #4a4a4a;
-  color: #c0c0c0;
 }
 
 .preset-btn.active {
   border-color: #8b5cf6;
   background: #4a4a4a;
-  color: #8b5cf6;
 }
 
 /* Main Content */
@@ -164,19 +179,18 @@ body {
   font-weight: 500;
 }
 
-.edit-link {
+.edit-btn {
   background: none;
   border: none;
   color: #8b5cf6;
   font-size: 12px;
   cursor: pointer;
-  text-decoration: underline;
   padding: 4px 8px;
   border-radius: 4px;
   transition: background-color 0.2s;
 }
 
-.edit-link:hover {
+.edit-btn:hover {
   background: rgba(139, 92, 246, 0.1);
 }
 
@@ -184,51 +198,54 @@ body {
   flex: 1;
   padding: 16px;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
-.list-title {
+.content-title {
   color: white;
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 12px;
 }
 
-.list-items {
-  flex: 1;
-  outline: none;
-  border: none;
-  padding: 0;
-  background: transparent;
-  min-height: 60px;
-}
-
-.list-items:focus {
-  outline: none;
-}
-
-.list-items[contenteditable="true"] {
-  cursor: text;
-}
-
-.list-items[contenteditable="true"]:focus {
-  outline: none;
-}
-
-.list-item {
+.content-list {
+  list-style: none;
+  color: white;
   font-size: 13px;
-  font-weight: 400;
-  color: #e2e8f0;
-  margin-bottom: 8px;
-  padding: 2px 0;
-  cursor: text;
   line-height: 1.5;
 }
 
-.list-item:empty::before {
-  content: "- ";
+.content-list li {
+  margin-bottom: 8px;
+  padding-left: 8px;
+}
+
+/* List Textarea */
+.list-textarea {
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  resize: none;
+  background: transparent;
+  color: #e2e8f0;
+  outline: none;
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  overflow: hidden;
+}
+
+.list-textarea:focus {
+  background: transparent;
+}
+
+.list-textarea::placeholder {
   color: #6b7280;
+  font-style: italic;
 }
 
 /* Strength Section */
@@ -285,7 +302,7 @@ body {
 }
 
 .strength-value {
-  color: #fbbf24;
+  color: white;
   font-size: 13px;
   font-weight: 500;
   min-width: 120px;
