@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'openOptions':
       chrome.runtime.openOptionsPage();
       break;
-      
+      //did some stuff here
     case 'showNotification':
       showNotification(request.message, request.options);
       break;
